@@ -65,35 +65,9 @@ pub fn setup(
     println!("Setting up ingame!");
     game_state.title_screen_cooldown = 1.0;
 
-//  commands.spawn_bundle(PbrBundle {
-//      mesh: meshes.add(Mesh::from(shape::Plane { size: 5.0 })),
-//      material: materials.add(Color::rgb(0.3, 0.5, 0.3).into()),
-//      ..default()
-//  })
-//  .insert(CleanupMarker)
-//  .insert(Collider::cuboid(2.5, 0.01, 2.5));
-
-    if let Some(gltf) = assets_gltf.get(&game_assets.matador.clone()) {
-        commands.spawn_bundle(SceneBundle {
-            scene: gltf.scenes[0].clone(),
-            transform: {
-                let mut t = Transform::from_xyz(0.0, 0.0, 0.0);
-                t.rotate_y(TAU * 0.75);
-                t
-            },
-            ..default()
-        })
-        .insert_bundle(player::PlayerBundle::new())
-        .insert(Restitution::coefficient(0.2))
-        .insert(RigidBody::Dynamic)
-        .with_children(|children| {
-            children.spawn()
-                .insert(Collider::cuboid(0.2, 1.0, 0.2))
-                // Position the collider relative to the rigid-body.
-                .insert_bundle(TransformBundle::from(Transform::from_xyz(0.0, 1.0, 0.0)));
-        })
-        .insert(CleanupMarker);
-    }
+//  if let Some(gltf) = assets_gltf.get(&game_assets.matador.clone()) {
+//      .insert(CleanupMarker);
+//  }
 
     if let Some(gltf) = assets_gltf.get(&game_assets.level_one.clone()) {
         commands.spawn_bundle(HookedSceneBundle {
@@ -101,23 +75,47 @@ pub fn setup(
            scene: SceneBundle { scene: gltf.scenes[0].clone(), ..default() },
            hook: SceneHook::new(move |entity, cmds, mesh| {
                if let Some(name) = entity.get::<Name>().map(|t|t.as_str()) {
-                   if name.contains("Floor") {
+                   println!("Name: {} Mesh: {:?}", name, mesh.is_some());
+                   if name.contains("static") {
                        if let Some(mesh) = mesh {
+                           println!("adding collider");
                            cmds.insert(Collider::from_bevy_mesh(mesh, &ComputedColliderShape::TriMesh).unwrap());
                        }
                    }
-                   if name.contains("Plate") {
+                   if name.contains("player") {
+                       cmds.insert_bundle(player::PlayerBundle::new())
+                       .insert(Restitution::coefficient(0.2))
+                       .insert(RigidBody::Dynamic)
+                       .insert(Velocity::default())
+//                       .insert(Damping { linear_damping: 0.9, angular_damping: 0.0 })
+                       .insert(LockedAxes::ROTATION_LOCKED_X | LockedAxes::ROTATION_LOCKED_Z | LockedAxes::ROTATION_LOCKED_Y) 
+                       .insert(Ccd::enabled())
+                       .with_children(|children| {
+                           children.spawn()
+                               .insert(Collider::cuboid(0.2, 1.0, 0.2))
+                               // Position the collider relative to the rigid-body.
+                               .insert_bundle(TransformBundle::from(Transform::from_xyz(0.0, 1.0, 0.0)));
+                       });
+                   }
+                   if name.contains("dynamic") {
+                       if let Some(mesh) = mesh {
+                           cmds.insert(Restitution::coefficient(0.2))
+                               .insert(Collider::from_bevy_mesh(mesh, &ComputedColliderShape::TriMesh).unwrap())
+                               .insert(RigidBody::Dynamic);
+                       }
+                   }
+                   if name.contains("plate") {
+                       println!("adding collider plate");
                        cmds.insert(Restitution::coefficient(0.2))
                            .insert(Collider::cuboid(1.0, 0.1, 1.0))
-                           .insert(RigidBody::Dynamic)
-                           .insert(CleanupMarker);
+                           .insert(RigidBody::Dynamic);
                    }
+
+                   cmds.insert(CleanupMarker);
                }
            }),
         });
     }
-
-
 
     // lights
     commands.insert_resource(AmbientLight {

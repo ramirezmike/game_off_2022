@@ -12,6 +12,7 @@ use leafwing_input_manager::prelude::*;
 use rand::Rng;
 use std::f32::consts::TAU;
 use std::collections::HashMap;
+use bevy_rapier3d::prelude::*;
 
 pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
@@ -29,7 +30,7 @@ impl Plugin for PlayerPlugin {
 
 pub fn move_player(
     time: Res<Time>,
-    mut players: Query<(Entity, &mut Transform, &mut Player)>,
+    mut players: Query<(Entity, &mut Transform, &mut Player, &mut Velocity)>,
     mut player_move_event_reader: EventReader<PlayerMoveEvent>,
     mut game_state: ResMut<game_state::GameState>,
     game_assets: ResMut<GameAssets>,
@@ -39,32 +40,34 @@ pub fn move_player(
         move_events.entry(move_event.entity).or_insert(move_event);
     }
 
-    for (entity, mut transform, mut player) in players.iter_mut() {
+    for (entity, mut transform, mut player, mut velocity) in players.iter_mut() {
         let speed: f32 = player.speed;
         let rotation_speed: f32 = player.rotation_speed;
         let friction: f32 = player.friction;
 
-        player.velocity *= friction.powf(time.delta_seconds());
+        velocity.linvel *= friction.powf(time.delta_seconds());
         if let Some(move_event) = move_events.get(&entity) {
             match move_event.movement {
                 Movement::Normal(direction) => {
                     let acceleration = Vec3::from(direction);
-                    player.velocity += (acceleration.zero_signum() * speed) * time.delta_seconds();
+                    velocity.linvel += (acceleration.zero_signum() * speed) * time.delta_seconds();
                 }
             }
         }
 
-        player.velocity = player.velocity.clamp_length_max(speed);
+        velocity.linvel = velocity.linvel.clamp_length_max(speed);
 //      player.velocity.z *= if player.velocity.x > 0.0 { 1.0 } else { 0.0 };
 //      player.velocity.y *= if player.velocity.x > 0.0 { 1.0 } else { 0.0 };
 //      game_state.driving_speed = player.velocity.x * 0.1;
 
-        let mut new_translation = transform.translation + (player.velocity * time.delta_seconds());
+        let mut new_translation = transform.translation + (velocity.linvel * time.delta_seconds());
 
         let angle = (-(new_translation.z - transform.translation.z))
             .atan2(new_translation.x - transform.translation.x);
         let rotation = Quat::from_axis_angle(Vec3::Y, angle);
-        transform.translation = new_translation;
+//       velocity.angvel = rotation.to_scaled_axis();
+//        transform.translation = new_translation;
+//        velocity.linvel = player.velocity * time.delta_seconds();
 
 //        transform.translation.x = 0.0; // hardcoding for now
 
@@ -73,7 +76,8 @@ pub fn move_player(
             .lerp(Quat::from_axis_angle(Vec3::Y, TAU * 0.75), time.delta_seconds() * rotation_speed);
 
         // don't rotate if we're not moving or if uhh rotation isnt a number?? why isn't it a number? who did this
-        if !new_rotation.is_nan() && player.velocity.length() > 0.5 {
+        if !rotation.is_nan() && velocity.linvel.length() > 1.0 {
+            println!("setting rotation");
             transform.rotation = rotation;
         }
     }

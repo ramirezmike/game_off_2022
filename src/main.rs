@@ -100,18 +100,18 @@ impl ZeroSignum for Vec3 {
 fn debug(
     mut commands: Commands,
     keys: Res<Input<KeyCode>>,
-//  game_state: ResMut<game_state::GameState>,
+    game_state: ResMut<game_state::GameState>,
     mut exit: ResMut<Events<AppExit>>,
-//  mut assets_handler: asset_loading::AssetsHandler,
-//  mut game_assets: ResMut<assets::GameAssets>,
+    mut assets_handler: asset_loading::AssetsHandler,
+    mut game_assets: ResMut<assets::GameAssets>,
 ) {
     if keys.just_pressed(KeyCode::Q) {
         exit.send(AppExit);
     }
 
-//  if keys.just_pressed(KeyCode::R) {
-//      assets_handler.load(AppState::ResetInGame, &mut game_assets, &game_state);
-//  }
+    if keys.just_pressed(KeyCode::R) {
+        assets_handler.load(AppState::ResetInGame, &mut game_assets, &game_state);
+    }
 }
 
 fn window_settings(mut windows: ResMut<Windows>) {
