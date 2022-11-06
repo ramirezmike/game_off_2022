@@ -1,5 +1,5 @@
 use crate::{
-    asset_loading, assets::GameAssets, cleanup, game_state, AppState, game_camera, player,
+    asset_loading, assets::GameAssets, cleanup, game_state, AppState, game_camera, player, 
 };
 use bevy::prelude::*;
 use bevy::gltf::Gltf;

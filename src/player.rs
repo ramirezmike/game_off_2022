@@ -32,6 +32,7 @@ pub fn move_player(
     time: Res<Time>,
     mut players: Query<(Entity, &mut Transform, &mut Player, &mut Velocity)>,
     mut player_move_event_reader: EventReader<PlayerMoveEvent>,
+    mut animations: Query<&mut AnimationPlayer>,
     mut game_state: ResMut<game_state::GameState>,
     game_assets: ResMut<GameAssets>,
 ) {
@@ -71,13 +72,30 @@ pub fn move_player(
 
 //        transform.translation.x = 0.0; // hardcoding for now
 
+        if velocity.linvel.length() > 0.1 {
+            let mut animation = animations.get_mut(entity).unwrap();
+            if player.current_animation != game_assets.matador_run {
+                animation.play(game_assets.matador_run.clone_weak()).repeat();
+                animation.resume();
+                player.current_animation = game_assets.matador_run.clone_weak();
+            }
+            animation.set_speed(velocity.linvel.length() / 2.0);
+        } else {
+            let mut animation = animations.get_mut(entity).unwrap();
+            if player.current_animation != game_assets.matador_idle {
+                animation.play(game_assets.matador_idle.clone_weak()).repeat();
+                animation.resume();
+                player.current_animation = game_assets.matador_idle.clone_weak();
+                animation.set_speed(4.0);
+            } 
+        }
+
         let new_rotation = transform
             .rotation
             .lerp(Quat::from_axis_angle(Vec3::Y, TAU * 0.75), time.delta_seconds() * rotation_speed);
 
         // don't rotate if we're not moving or if uhh rotation isnt a number?? why isn't it a number? who did this
         if !rotation.is_nan() && velocity.linvel.length() > 1.0 {
-            println!("setting rotation");
             transform.rotation = rotation;
         }
     }
@@ -128,6 +146,7 @@ pub struct Player {
     pub rotation_speed: f32,
     pub friction: f32,
     pub random: f32,
+    pub current_animation: Handle<AnimationClip>,
 }
 
 impl Player {
@@ -140,6 +159,7 @@ impl Player {
             rotation_speed: 1.0,
             friction: 0.10,
             random: rng.gen_range(0.5..1.0),
+            current_animation: Handle::<AnimationClip>::default(),
         }
     }
 }
