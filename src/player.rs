@@ -3,9 +3,9 @@ use crate::{
     direction,
     game_controller,
     game_state,
-    ingame,
     AppState,
     ZeroSignum,
+    bull,
 };
 use bevy::prelude::*;
 use leafwing_input_manager::prelude::*;
@@ -28,9 +28,51 @@ impl Plugin for PlayerPlugin {
     }
 }
 
+#[derive(Component, Reflect, Default)]
+#[reflect(Component)]
+pub struct Player {
+    pub speed: f32,
+    pub rotation_speed: f32,
+    pub friction: f32,
+    pub random: f32,
+    pub current_animation: Handle<AnimationClip>,
+    pub state: PlayerState,
+    pub dive_cooldown: f32,
+}
+
+impl Player {
+    pub fn new() -> Self {
+        let mut rng = rand::thread_rng();
+
+        Player {
+            speed: 40.0,
+            rotation_speed: 1.0,
+            friction: 0.10,
+            random: rng.gen_range(0.5..1.0),
+            current_animation: Handle::<AnimationClip>::default(),
+            state: PlayerState::Normal,
+            dive_cooldown: 0.0,
+        }
+    }
+}
+
+#[derive(Reflect, Clone, PartialEq)]
+pub enum PlayerState {
+    Normal,
+    Diving,
+    Charging,
+}
+
+impl Default for PlayerState {
+    fn default() -> PlayerState {
+        PlayerState::Normal
+    }
+}
+
 pub fn move_player(
     time: Res<Time>,
-    mut players: Query<(Entity, &mut Transform, &mut Player, &mut Velocity)>,
+    mut players: Query<(Entity, &mut Transform, &mut Player, &mut Velocity), Without<bull::Bull>>,
+    bull: Query<(&Transform, &bull::Bull), Without<Player>>,
     mut player_move_event_reader: EventReader<PlayerMoveEvent>,
     mut animations: Query<&mut AnimationPlayer>,
     mut game_state: ResMut<game_state::GameState>,
@@ -42,21 +84,69 @@ pub fn move_player(
     }
 
     for (entity, mut transform, mut player, mut velocity) in players.iter_mut() {
-        let speed: f32 = player.speed;
+        let speed: f32 = match player.state {
+                             PlayerState::Normal => player.speed,
+                             PlayerState::Charging => player.speed * 0.25,
+                             PlayerState::Diving => player.speed * 2.25,
+                         };
+
         let rotation_speed: f32 = player.rotation_speed;
-        let friction: f32 = player.friction;
+        let friction: f32 = player.friction + if player.state == PlayerState::Diving { 0.1 } else { 0.0 };
 
         velocity.linvel *= friction.powf(time.delta_seconds());
-        if let Some(move_event) = move_events.get(&entity) {
-            match move_event.movement {
-                Movement::Normal(direction) => {
-                    let acceleration = Vec3::from(direction);
+        match &player.state {
+            PlayerState::Diving => {
+                let acceleration;
+                if player.dive_cooldown >= 2.0 {
+                    acceleration = 
+                        if let Some(move_event) = move_events.get(&entity) {
+                            match move_event.movement {
+                                Movement::Normal(direction) => Vec3::from(direction)
+                            }
+                        } else {
+                            velocity.linvel.normalize()
+                        };
+                } else {
+                    acceleration = velocity.linvel.normalize();
+                }
+
+                if player.dive_cooldown > 1.6 {
                     velocity.linvel += (acceleration.zero_signum() * speed) * time.delta_seconds();
+                }
+
+                let mut animation = animations.get_mut(entity).unwrap();
+                if player.current_animation != game_assets.matador_dive {
+                    animation.play(game_assets.matador_dive.clone_weak());
+                    player.current_animation = game_assets.matador_dive.clone_weak();
+                    animation.set_speed(1.25);
+                }
+
+                player.dive_cooldown -= time.delta_seconds();
+                player.dive_cooldown = player.dive_cooldown.clamp(0.0, 10.0);
+                println!("dive cooldown: {:?}", player.dive_cooldown);
+            },
+            _ => {
+                if let Some(move_event) = move_events.get(&entity) {
+                    match move_event.movement {
+                        Movement::Normal(direction) => {
+                            let acceleration = Vec3::from(direction);
+                            velocity.linvel += (acceleration.zero_signum() * speed) * time.delta_seconds();
+                        }
+                    }
                 }
             }
         }
 
         velocity.linvel = velocity.linvel.clamp_length_max(speed);
+        if player.state == PlayerState::Diving {
+            if player.dive_cooldown > 0.0 {
+                println!("diving.. {:?}", velocity.linvel.length());
+                continue;
+            } else {
+                println!("dive ended! {:?}", velocity.linvel.length());
+                player.state = PlayerState::Normal;
+            }
+        } 
 //      player.velocity.z *= if player.velocity.x > 0.0 { 1.0 } else { 0.0 };
 //      player.velocity.y *= if player.velocity.x > 0.0 { 1.0 } else { 0.0 };
 //      game_state.driving_speed = player.velocity.x * 0.1;
@@ -72,7 +162,15 @@ pub fn move_player(
 
 //        transform.translation.x = 0.0; // hardcoding for now
 
-        if velocity.linvel.length() > 0.1 {
+        if player.state == PlayerState::Charging {
+            let mut animation = animations.get_mut(entity).unwrap();
+            if player.current_animation != game_assets.matador_pose {
+                animation.play(game_assets.matador_pose.clone_weak());
+                animation.resume();
+                player.current_animation = game_assets.matador_pose.clone_weak();
+                animation.set_speed(4.0);
+            } 
+        } else if velocity.linvel.length() > 0.1 {
             let mut animation = animations.get_mut(entity).unwrap();
             if player.current_animation != game_assets.matador_run {
                 animation.play(game_assets.matador_run.clone_weak()).repeat();
@@ -90,14 +188,29 @@ pub fn move_player(
             } 
         }
 
-        let new_rotation = transform
-            .rotation
-            .lerp(Quat::from_axis_angle(Vec3::Y, TAU * 0.75), time.delta_seconds() * rotation_speed);
+        match player.state {
+             PlayerState::Charging => {
+                 for (bull_transform, _) in &bull {
+                     let bull_translation = bull_transform.translation;
+                     let player_translation = transform.translation;
+                     let angle = (-(bull_translation.z - player_translation.z))
+                            .atan2(bull_translation.x - player_translation.x);
+                     let rotation = Quat::from_axis_angle(Vec3::Y, angle);
+                     transform.rotation = rotation;
+                 }
+             },
+             _ => {
+                let new_rotation = transform
+                    .rotation
+                    .lerp(Quat::from_axis_angle(Vec3::Y, TAU * 0.75), time.delta_seconds() * rotation_speed);
 
-        // don't rotate if we're not moving or if uhh rotation isnt a number?? why isn't it a number? who did this
-        if !rotation.is_nan() && velocity.linvel.length() > 1.0 {
-            transform.rotation = rotation;
-        }
+                // don't rotate if we're not moving or if rotation isnt a number
+                if !rotation.is_nan() && velocity.linvel.length() > 1.0 {
+                    transform.rotation = rotation;
+                }
+             }
+        };
+
     }
 }
 
@@ -136,32 +249,6 @@ impl PlayerAction {
 pub struct PlayerMoveEvent {
     pub entity: Entity,
     pub movement: Movement,
-}
-
-#[derive(Component, Reflect, Default)]
-#[reflect(Component)]
-pub struct Player {
-    pub velocity: Vec3,
-    pub speed: f32,
-    pub rotation_speed: f32,
-    pub friction: f32,
-    pub random: f32,
-    pub current_animation: Handle<AnimationClip>,
-}
-
-impl Player {
-    pub fn new() -> Self {
-        let mut rng = rand::thread_rng();
-
-        Player {
-            velocity: Vec3::default(),
-            speed: 40.0,
-            rotation_speed: 1.0,
-            friction: 0.10,
-            random: rng.gen_range(0.5..1.0),
-            current_animation: Handle::<AnimationClip>::default(),
-        }
-    }
 }
 
 #[derive(Bundle)]
@@ -300,11 +387,12 @@ pub enum Movement {
 
 fn handle_input(
     mut app_state: ResMut<State<AppState>>,
-    players: Query<(Entity, &ActionState<PlayerAction>, &Transform, &Player)>,
+    mut players: Query<(Entity, &ActionState<PlayerAction>, &Transform, &mut Player, &mut Velocity)>,
     game_state: Res<game_state::GameState>,
     mut player_move_event_writer: EventWriter<PlayerMoveEvent>,
+    mut bull_charge_event_writer: EventWriter<bull::BullChargeEvent>,
 ) {
-    for (entity, action_state, transform, player) in players.iter() {
+    for (entity, action_state, transform, mut player, mut velocity) in &mut players {
         //println!("T: {:?}", transform.translation);
         let mut direction = direction::Direction::NEUTRAL;
 
@@ -324,7 +412,12 @@ fn handle_input(
         if action_state.just_pressed(PlayerAction::ActionUp) {}
         if action_state.pressed(PlayerAction::ActionUp) {}
 
-        if action_state.just_pressed(PlayerAction::ActionDown) {}
+        if action_state.just_pressed(PlayerAction::ActionDown) && player.state != PlayerState::Diving {
+            player.state = PlayerState::Diving;
+            velocity.linvel = velocity.linvel.normalize();
+            player.dive_cooldown = 2.0;
+            //audio.play_sfx(&game_assets.dive);
+        }
 
         if action_state.pressed(PlayerAction::ActionDown) {}
 
@@ -332,8 +425,15 @@ fn handle_input(
 
         if action_state.pressed(PlayerAction::ActionLeft) {}
 
-        if action_state.just_pressed(PlayerAction::ActionRight) {}
+        if action_state.just_pressed(PlayerAction::ActionRight) {
+            bull_charge_event_writer.send(bull::BullChargeEvent { charging: true });
+        }
 
-        if action_state.pressed(PlayerAction::ActionRight) {}
+        if action_state.pressed(PlayerAction::ActionRight) {
+            player.state = PlayerState::Charging;
+        } 
+        if action_state.just_released(PlayerAction::ActionRight) {
+            player.state = PlayerState::Normal;
+        }
     }
 }

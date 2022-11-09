@@ -1,8 +1,9 @@
 use crate::{
-    asset_loading, assets::GameAssets, cleanup, game_state, AppState, game_camera, player, 
+    asset_loading, assets::GameAssets, cleanup, game_state, AppState, game_camera, player, bull, 
 };
 use bevy::prelude::*;
 use bevy::gltf::Gltf;
+use bevy::render::view::NoFrustumCulling;
 use leafwing_input_manager::prelude::*;
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
@@ -24,6 +25,7 @@ impl Plugin for InGamePlugin {
 //                  .with_system(game_camera::follow_player.after(player::move_player))
 //                  .with_system(game_camera::light_follow_camera.after(player::move_player))
 //                    .with_system(pass_speed_to_shader.after(player::move_player))
+                    .with_system(collision_report)
                     .with_system(game_camera::pan_orbit_camera),
             );
     }
@@ -31,6 +33,14 @@ impl Plugin for InGamePlugin {
 
 #[derive(Component, Copy, Clone)]
 pub struct CleanupMarker;
+
+fn collision_report(
+    mut events: EventReader<CollisionEvent> 
+) {
+    for event in events.iter() {
+        println!("Collision: {:?}", event);
+    }
+}
 
 fn reset_ingame(
     mut assets_handler: asset_loading::AssetsHandler,
@@ -46,9 +56,16 @@ pub fn load(
     game_state: &ResMut<game_state::GameState>,
 ) {
     println!("loading for ingame");
-    assets_handler.add_glb(&mut game_assets.matador, "models/person.glb");
-    assets_handler.add_animation(&mut game_assets.matador_run,"models/person.glb#Animation2");
-    assets_handler.add_animation(&mut game_assets.matador_idle,"models/person.glb#Animation1");
+    assets_handler.add_glb(&mut game_assets.matador, "models/matador.glb");
+    assets_handler.add_animation(&mut game_assets.matador_run,"models/matador.glb#Animation3");
+    assets_handler.add_animation(&mut game_assets.matador_idle,"models/matador.glb#Animation1");
+    assets_handler.add_animation(&mut game_assets.matador_dive,"models/matador.glb#Animation0");
+    assets_handler.add_animation(&mut game_assets.matador_pose,"models/matador.glb#Animation2");
+    assets_handler.add_glb(&mut game_assets.bull, "models/bull.glb");
+    assets_handler.add_animation(&mut game_assets.bull_charge,"models/bull.glb#Animation0");
+    assets_handler.add_animation(&mut game_assets.bull_idle,"models/bull.glb#Animation1");
+    assets_handler.add_animation(&mut game_assets.bull_run,"models/bull.glb#Animation2");
+    assets_handler.add_animation(&mut game_assets.bull_walk,"models/bull.glb#Animation3");
     assets_handler.add_glb(&mut game_assets.plate, "models/plate.glb");
     assets_handler.add_glb(&mut game_assets.level_one, "models/level_one.glb");
 }
@@ -82,6 +99,16 @@ pub fn setup(
                            cmds.insert(Collider::from_bevy_mesh(mesh, &ComputedColliderShape::TriMesh).unwrap());
                        }
                    }
+                   if name.contains("bull") {
+                       cmds.insert(NoFrustumCulling)
+                           .insert(Collider::cuboid(1.0, 1.0, 1.0))
+                           .insert(Velocity::default())
+                           .insert(LockedAxes::ROTATION_LOCKED_X | LockedAxes::ROTATION_LOCKED_Z | LockedAxes::ROTATION_LOCKED_Y) 
+                           .insert(Ccd::enabled())
+                           .insert(ActiveEvents::COLLISION_EVENTS)
+                           .insert(RigidBody::Dynamic)
+                           .insert(bull::Bull::default());
+                   }
                    if name.contains("player") {
                        cmds.insert_bundle(player::PlayerBundle::new())
                        .insert(Restitution::coefficient(0.2))
@@ -106,8 +133,8 @@ pub fn setup(
                    }
                    if name.contains("plate") {
                        println!("adding collider plate");
-                       cmds.insert(Restitution::coefficient(0.2))
-                           .insert(Collider::cuboid(1.0, 0.1, 1.0))
+                       cmds
+                           .insert(Collider::cuboid(1.0, 0.05, 1.0))
                            .insert(RigidBody::Dynamic);
                    }
 

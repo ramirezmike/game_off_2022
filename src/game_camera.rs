@@ -7,8 +7,8 @@ use bevy::render::view::RenderLayers;
 use bevy::render::camera::Projection;
 use std::f32::consts::TAU;
 
-pub const INGAME_CAMERA_X: f32 = -10.0;
-pub const INGAME_CAMERA_Y: f32 = 4.0;
+pub const INGAME_CAMERA_X: f32 = -35.0;
+pub const INGAME_CAMERA_Y: f32 = 20.0;
 pub const INGAME_CAMERA_ROTATION_AXIS: Vec3 = Vec3::new(-0.2211861, -0.9493068, -0.22336805);
 pub const INGAME_CAMERA_ROTATION_ANGLE: f32 = 1.6325973;
 

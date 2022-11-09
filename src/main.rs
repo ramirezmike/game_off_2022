@@ -9,6 +9,7 @@ use bevy_rapier3d::prelude::*;
 
 mod asset_loading;
 mod assets;
+mod bull;
 mod direction;
 mod game_camera;
 mod game_controller;
@@ -23,6 +24,7 @@ fn main() {
             ..default()
         })
         .add_plugins(DefaultPlugins)
+        .add_plugin(bull::BullPlugin)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         .add_plugin(RapierDebugRenderPlugin::default())
         .add_plugin(WorldInspectorPlugin::new())

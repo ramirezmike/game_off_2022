@@ -16,6 +16,13 @@ pub struct GameAssets {
     pub matador: Handle<Gltf>,
     pub matador_run: Handle<AnimationClip>,
     pub matador_idle: Handle<AnimationClip>,
+    pub matador_dive: Handle<AnimationClip>,
+    pub matador_pose: Handle<AnimationClip>,
+    pub bull: Handle<Gltf>,
+    pub bull_idle: Handle<AnimationClip>,
+    pub bull_walk: Handle<AnimationClip>,
+    pub bull_run: Handle<AnimationClip>,
+    pub bull_charge: Handle<AnimationClip>,
     pub plate: Handle<Gltf>,
     pub level_one: Handle<Gltf>,
 
