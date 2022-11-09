@@ -63,12 +63,16 @@ pub fn load(
     assets_handler.add_animation(&mut game_assets.matador_pose,"models/matador.glb#Animation2");
     assets_handler.add_glb(&mut game_assets.bull, "models/bull.glb");
     assets_handler.add_animation(&mut game_assets.bull_charge,"models/bull.glb#Animation0");
-    assets_handler.add_animation(&mut game_assets.bull_idle,"models/bull.glb#Animation1");
-    assets_handler.add_animation(&mut game_assets.bull_run,"models/bull.glb#Animation2");
-    assets_handler.add_animation(&mut game_assets.bull_walk,"models/bull.glb#Animation3");
+    assets_handler.add_animation(&mut game_assets.bull_collide,"models/bull.glb#Animation1");
+    assets_handler.add_animation(&mut game_assets.bull_idle,"models/bull.glb#Animation2");
+    assets_handler.add_animation(&mut game_assets.bull_run,"models/bull.glb#Animation3");
+    assets_handler.add_animation(&mut game_assets.bull_walk,"models/bull.glb#Animation4");
     assets_handler.add_glb(&mut game_assets.plate, "models/plate.glb");
     assets_handler.add_glb(&mut game_assets.level_one, "models/level_one.glb");
 }
+
+#[derive(Component)]
+pub struct Wall;
 
 pub fn setup(
     mut commands: Commands,
@@ -96,7 +100,8 @@ pub fn setup(
                    if name.contains("static") {
                        if let Some(mesh) = mesh {
                            println!("adding collider");
-                           cmds.insert(Collider::from_bevy_mesh(mesh, &ComputedColliderShape::TriMesh).unwrap());
+                           cmds.insert(Collider::from_bevy_mesh(mesh, &ComputedColliderShape::TriMesh).unwrap())
+                               .insert(Wall);
                        }
                    }
                    if name.contains("bull") {
@@ -105,7 +110,8 @@ pub fn setup(
                            .insert(Velocity::default())
                            .insert(LockedAxes::ROTATION_LOCKED_X | LockedAxes::ROTATION_LOCKED_Z | LockedAxes::ROTATION_LOCKED_Y) 
                            .insert(Ccd::enabled())
-                           .insert(ActiveEvents::COLLISION_EVENTS)
+                           .insert(ActiveEvents::CONTACT_FORCE_EVENTS)
+                           .insert(ContactForceEventThreshold(3000.0))
                            .insert(RigidBody::Dynamic)
                            .insert(bull::Bull::default());
                    }
@@ -134,6 +140,8 @@ pub fn setup(
                    if name.contains("plate") {
                        println!("adding collider plate");
                        cmds
+                           .insert(Restitution::coefficient(0.9))
+                           .insert(ColliderMassProperties::Density(0.01))
                            .insert(Collider::cuboid(1.0, 0.05, 1.0))
                            .insert(RigidBody::Dynamic);
                    }

@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use rand::thread_rng;
+use bevy::render::view::NoFrustumCulling;
 use std::collections::HashMap;
 use bevy_rapier3d::prelude::*;
 
@@ -8,6 +9,7 @@ use crate::{
     AppState,
     ZeroSignum,
     player,
+    ingame,
 };
 
 pub struct BullPlugin;
@@ -17,10 +19,13 @@ impl Plugin for BullPlugin {
             SystemSet::on_update(AppState::InGame)
                 .with_system(update_bull_minds)
                 .with_system(animate_bull)
+                .with_system(handle_collisions)
                 .with_system(update_bulls)
                 .with_system(handle_bull_charge_event)
+                .with_system(handle_reset_bull_event_handler.before(update_bulls))
         )
         .add_event::<BullChargeEvent>()
+        .add_event::<ResetBullEvent>()
         .add_event::<BullMoveEvent>();
     }
 }
@@ -37,6 +42,7 @@ pub enum BullState {
     Charging,
     Walking,
     Running,
+    Collision,
 }
 
 impl Default for BullState {
@@ -83,6 +89,31 @@ impl Default for Bull {
     }
 }
 
+
+fn handle_collisions(
+    mut contact_force_events: EventReader<ContactForceEvent>,
+    mut bulls: Query<(&mut Bull, &mut Velocity)>,
+    walls: Query<&ingame::Wall>,
+) {
+    for e in contact_force_events.iter() {
+        println!("e: {}", e.total_force_magnitude);
+        let is_wall = walls.get(e.collider1).is_ok() || walls.get(e.collider2).is_ok();
+        if is_wall {
+            println!("hit wall");
+            for (mut bull, mut velocity) in &mut bulls {
+                if bull.state == BullState::Running {
+                    bull.state = BullState::Collision;
+                    bull.charging_cooldown = 1.0;
+
+                    velocity.linvel = -velocity.linvel;
+                }
+            }
+        }
+    }
+}
+
+pub struct ResetBullEvent(Entity);
+
 pub struct BullMoveEvent {
     pub entity: Entity,
     pub direction: Vec2,
@@ -113,6 +144,14 @@ fn animate_bull(
         let mut animation = animations.get_mut(entity).unwrap();
 
         match bull.state {
+            BullState::Collision => {
+                if bull.current_animation != game_assets.bull_collide {
+                    animation.play(game_assets.bull_collide.clone_weak());
+                    animation.resume();
+                    bull.current_animation = game_assets.bull_collide.clone_weak();
+                }
+                animation.set_speed(2.0);
+            },
             BullState::Walking => {
                 if bull.current_animation != game_assets.bull_walk {
                     animation.play(game_assets.bull_walk.clone_weak()).repeat();
@@ -149,11 +188,37 @@ fn animate_bull(
     }
 }
 
+fn handle_reset_bull_event_handler(
+    mut commands: Commands,
+    mut reset_bull_event_writer: EventReader<ResetBullEvent>,
+    mut bulls: Query<(&mut Transform, &mut GlobalTransform, &mut Velocity), With<Bull>>,
+) {
+    for event in reset_bull_event_writer.iter() {
+        println!("AHHH");
+
+        for (mut transform, mut global_transform, mut velocity) in &mut bulls {
+            velocity.linvel = Vec3::default();
+            velocity.angvel = Vec3::default();
+            *transform = Transform::from_xyz(0.0, 2.0, 0.0);
+            *global_transform = GlobalTransform::from_xyz(0.0, 2.0, 0.0);
+        }
+//      commands.entity(event.0)
+//              .insert(RigidBody::Dynamic)
+//              .insert(Collider::cuboid(1.0, 1.0, 1.0));
+//      if let Ok(mut t) = transforms.get_mut(event.0) {
+//          t.translation = Vec3::new(0.0, 2.0, 0.0);
+//          println!("set transform");
+//      }
+    }
+}
+
 fn update_bulls(
+    mut commands: Commands,
     time: Res<Time>,
     mut bulls: Query<(Entity, &mut Transform, &mut Bull, &mut Velocity), Without<player::Player>>,
     mut bull_move_event_reader: EventReader<BullMoveEvent>,
     players: Query<(&Transform, &player::Player), Without<Bull>>,
+    mut reset_bull_event_writer: EventWriter<ResetBullEvent>,
 ) {
     let mut move_events = HashMap::new();
     for move_event in bull_move_event_reader.iter() {
@@ -161,6 +226,17 @@ fn update_bulls(
     }
 
     for (entity, mut transform, mut bull, mut velocity) in bulls.iter_mut() {
+        if transform.translation.is_nan() {
+            println!("is nan!");
+            println!("A{:?} {:?} {:?}", transform.translation, velocity.linvel, velocity.angvel);
+            velocity.linvel = Vec3::default();
+            velocity.angvel = Vec3::default();
+
+            println!("B{:?} {:?} {:?}", transform.translation, velocity.linvel, velocity.angvel);
+            reset_bull_event_writer.send(ResetBullEvent(entity));
+            continue;
+        }
+
         if bull.state == BullState::Idle {
             continue;
         }
@@ -186,6 +262,7 @@ fn update_bulls(
 
         let speed: f32 = match bull.state {
                              BullState::Running => bull.speed * 2.5,
+                             BullState::Collision => bull.speed * 1.5,
                              _ => bull.speed,
                          };
         let rotation_speed: f32 = bull.rotation_speed;
@@ -202,9 +279,18 @@ fn update_bulls(
                     for (player_transform, _) in &players {
                         let acceleration = player_transform.translation - transform.translation;
                         let acceleration = Vec3::new(acceleration.x, 0.0, acceleration.z);
-                        velocity.linvel += (acceleration.zero_signum() * speed) * time.delta_seconds();
+                        velocity.linvel += (acceleration.normalize() * speed) * time.delta_seconds();
                     }
                 }
+
+                if bull.charging_cooldown <= 0.0 {
+                    bull.state = BullState::Idle;
+                }
+            },
+            BullState::Collision => {
+                bull.charging_cooldown -= time.delta_seconds();
+                let direction = velocity.linvel.normalize();
+                velocity.linvel += (direction * speed) * time.delta_seconds();
 
                 if bull.charging_cooldown <= 0.0 {
                     bull.state = BullState::Idle;
@@ -220,7 +306,8 @@ fn update_bulls(
 
         velocity.linvel = velocity.linvel.clamp_length_max(speed);
 
-        let mut new_translation = transform.translation + (velocity.linvel * time.delta_seconds());
+        let linvel = if bull.state == BullState::Collision { -velocity.linvel } else { velocity.linvel };
+        let mut new_translation = transform.translation + (linvel * time.delta_seconds());
 
         let angle = (-(new_translation.z - transform.translation.z))
             .atan2(new_translation.x - transform.translation.x);
@@ -231,7 +318,7 @@ fn update_bulls(
             .lerp(rotation, time.delta_seconds() * rotation_speed);
 
         // don't rotate if we're not moving or if uhh rotation isnt a number?? why isn't it a number? who did this
-        if !rotation.is_nan() && velocity.linvel.length() > 1.0 {
+        if !rotation.is_nan() && linvel.length() > 1.0 {
             transform.rotation = rotation;
         }
     }

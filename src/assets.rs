@@ -23,6 +23,7 @@ pub struct GameAssets {
     pub bull_walk: Handle<AnimationClip>,
     pub bull_run: Handle<AnimationClip>,
     pub bull_charge: Handle<AnimationClip>,
+    pub bull_collide: Handle<AnimationClip>,
     pub plate: Handle<Gltf>,
     pub level_one: Handle<Gltf>,
 
