@@ -20,6 +20,7 @@ uuid = { version = "1.1.2", features = ["v4"]}
 bevy-inspector-egui = "0.12.1"
 bevy_rapier3d = { version = "0.17.0", features = ["debug-render"] }
 bevy-scene-hook = { git = "https://github.com/ramirezmike/bevy-scene-hook" }
+bevy_camera_shake = { git = "https://github.com/Andrewp2/bevy_camera_shake" }
 
 [patch.crates-io]
 wgpu = { git = "https://github.com/mockersf/wgpu/", branch = "unconditional-clear-workaround" }

@@ -6,8 +6,9 @@ use bevy::gltf::Gltf;
 use bevy::render::view::NoFrustumCulling;
 use leafwing_input_manager::prelude::*;
 use rand::prelude::SliceRandom;
-use rand::thread_rng;
+use rand::{thread_rng, Rng};
 use std::f32::consts::TAU;
+use bevy_camera_shake::{CameraShakePlugin, RandomSource, Shake3d};
 use bevy_rapier3d::prelude::*;
 use bevy_scene_hook::{HookPlugin, SceneHook, HookedSceneBundle};
 
@@ -20,6 +21,7 @@ impl Plugin for InGamePlugin {
             )
             .add_system_set(SystemSet::on_update(AppState::ResetInGame).with_system(reset_ingame))
             .add_plugin(HookPlugin)
+            .add_plugin(CameraShakePlugin)
             .add_system_set(
                 SystemSet::on_update(AppState::InGame)
 //                  .with_system(game_camera::follow_player.after(player::move_player))
@@ -39,6 +41,19 @@ fn collision_report(
 ) {
     for event in events.iter() {
         println!("Collision: {:?}", event);
+    }
+}
+
+fn random_number() -> f32 {
+    let mut rng = thread_rng();
+    let x: f32 = rng.gen();
+    x * 2.0 - 1.0
+}
+struct MyRandom;
+
+impl RandomSource for MyRandom {
+    fn rand(&self, _time: f32) -> f32 {
+        random_number()
     }
 }
 
@@ -185,20 +200,43 @@ pub fn setup(
     .insert(CleanupMarker);
 
     if camera.iter().len() == 0 {
-        game_camera::spawn_camera(
-            &mut commands,
-            CleanupMarker,
-            &game_assets,
-            Vec3::new(
-                game_camera::INGAME_CAMERA_X,
-                game_camera::INGAME_CAMERA_Y,
-                0.0,
-            ),
-            Quat::from_axis_angle(
-                game_camera::INGAME_CAMERA_ROTATION_AXIS,
-                game_camera::INGAME_CAMERA_ROTATION_ANGLE,
-            ),
-        );
+        let shake_id = commands
+            .spawn()
+            .insert(Shake3d {
+                max_offset: Vec3::new(0.0, 0.0, 0.0),
+                max_yaw_pitch_roll: Vec3::new(0.1, 0.1, 0.1),
+                trauma: 0.0,
+                trauma_power: 2.0,
+                decay: 0.8,
+                random_sources: [
+                    Box::new(MyRandom),
+                    Box::new(MyRandom),
+                    Box::new(MyRandom),
+                    Box::new(MyRandom),
+                    Box::new(MyRandom),
+                    Box::new(MyRandom),
+                ],
+            })
+            .insert_bundle(SpatialBundle::default())
+            .id();
+
+        let camera_id =
+            game_camera::spawn_camera(
+                &mut commands,
+                CleanupMarker,
+                &game_assets,
+                Vec3::new(
+                    game_camera::INGAME_CAMERA_X,
+                    game_camera::INGAME_CAMERA_Y,
+                    0.0,
+                ),
+                Quat::from_axis_angle(
+                    game_camera::INGAME_CAMERA_ROTATION_AXIS,
+                    game_camera::INGAME_CAMERA_ROTATION_ANGLE,
+                ),
+            );
+
+        commands.entity(shake_id).push_children(&[camera_id]);
     } else {
         // Commented this so that when I refresh the camera stays in the same place
 //      for mut camera in &mut camera {

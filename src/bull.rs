@@ -3,6 +3,7 @@ use rand::thread_rng;
 use bevy::render::view::NoFrustumCulling;
 use std::collections::HashMap;
 use bevy_rapier3d::prelude::*;
+use bevy_camera_shake::Shake3d;
 
 use crate::{
     assets::GameAssets,
@@ -12,6 +13,7 @@ use crate::{
     ingame,
 };
 
+const TRAUMA_AMOUNT: f32 = 0.5;
 pub struct BullPlugin;
 impl Plugin for BullPlugin {
     fn build(&self, app: &mut App) {
@@ -94,6 +96,7 @@ fn handle_collisions(
     mut contact_force_events: EventReader<ContactForceEvent>,
     mut bulls: Query<(&mut Bull, &mut Velocity)>,
     walls: Query<&ingame::Wall>,
+    mut shakeables: Query<&mut Shake3d>,
 ) {
     for e in contact_force_events.iter() {
         println!("e: {}", e.total_force_magnitude);
@@ -102,6 +105,9 @@ fn handle_collisions(
             println!("hit wall");
             for (mut bull, mut velocity) in &mut bulls {
                 if bull.state == BullState::Running {
+                    for mut shakeable in shakeables.iter_mut() {
+                        shakeable.trauma = f32::min(shakeable.trauma + TRAUMA_AMOUNT, 1.0);
+                    }
                     bull.state = BullState::Collision;
                     bull.charging_cooldown = 1.0;
 

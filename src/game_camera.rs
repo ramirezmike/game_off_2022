@@ -185,10 +185,11 @@ pub fn spawn_camera<T: Component + Clone>(
     game_assets: &Res<GameAssets>,
     translation: Vec3,
     rotation: Quat,
-) {
+) -> Entity {
     let radius = translation.length();
 
     println!("Spawning camera");
+    let id = 
     commands
         .spawn_bundle(Camera3dBundle {
             transform: {
@@ -215,20 +216,7 @@ pub fn spawn_camera<T: Component + Clone>(
         .insert(PanOrbitCamera {
             radius,
             ..Default::default()
-        });
-
-    commands
-        .spawn_bundle(Camera2dBundle {
-            camera_2d: Camera2d {
-                clear_color: ClearColorConfig::None,
-                ..default()
-            },
-            camera: Camera {
-                priority: 1,
-                ..default()
-            },
-            ..default()
         })
-        .insert(cleanup_marker.clone());
-    //    .insert(first_pass_layer);
+        .id();
+    id
 }

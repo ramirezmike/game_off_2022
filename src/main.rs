@@ -6,6 +6,7 @@ use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::window::WindowMode;
 use bevy_inspector_egui::{WorldInspectorPlugin, egui, bevy_egui};
 use bevy_rapier3d::prelude::*;
+use bevy_camera_shake::Shake3d;
 
 mod asset_loading;
 mod assets;
@@ -99,6 +100,7 @@ impl ZeroSignum for Vec3 {
     }
 }
 
+const TRAUMA_AMOUNT: f32 = 0.5;
 fn debug(
     mut commands: Commands,
     keys: Res<Input<KeyCode>>,
@@ -106,6 +108,7 @@ fn debug(
     mut exit: ResMut<Events<AppExit>>,
     mut assets_handler: asset_loading::AssetsHandler,
     mut game_assets: ResMut<assets::GameAssets>,
+    mut shakeables: Query<&mut Shake3d>,
 ) {
     if keys.just_pressed(KeyCode::Q) {
         exit.send(AppExit);
@@ -113,6 +116,13 @@ fn debug(
 
     if keys.just_pressed(KeyCode::R) {
         assets_handler.load(AppState::ResetInGame, &mut game_assets, &game_state);
+    }
+
+
+    if keys.just_pressed(KeyCode::E) {
+        for mut shakeable in shakeables.iter_mut() {
+            shakeable.trauma = f32::min(shakeable.trauma + TRAUMA_AMOUNT, 1.0);
+        }
     }
 }
 
