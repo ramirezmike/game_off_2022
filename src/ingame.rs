@@ -1,6 +1,6 @@
 use crate::{
     asset_loading, assets::GameAssets, cleanup, game_state, AppState, game_camera, player, bull, 
-    DampPhysics,
+    DampPhysics, props::*,
 };
 use bevy::prelude::*;
 use bevy::gltf::Gltf;
@@ -85,6 +85,7 @@ pub fn load(
     assets_handler.add_animation(&mut game_assets.bull_walk,"models/bull.glb#Animation4");
     assets_handler.add_glb(&mut game_assets.plate, "models/plate.glb");
     assets_handler.add_glb(&mut game_assets.level_one, "models/level_one.glb");
+    assets_handler.add_glb(&mut game_assets.broken_plate, "models/broken_plate.glb");
 }
 
 #[derive(Component)]
@@ -177,13 +178,7 @@ pub fn setup(
                        }
                    }
                    if name.contains("plate") {
-                       println!("adding collider plate");
-                       cmds
-                           .insert(Restitution::coefficient(0.9))
-                           .insert(ColliderMassProperties::Density(0.01))
-                           .insert(Collider::cuboid(1.0, 0.05, 1.0))
-                           //.insert(DampPhysics(2.0))
-                           .insert(RigidBody::Dynamic);
+                       Plate::add_components(cmds);
                    }
 
                    cmds.insert(CleanupMarker);

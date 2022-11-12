@@ -7,6 +7,8 @@ use bevy::window::WindowMode;
 use bevy_inspector_egui::{WorldInspectorPlugin, egui, bevy_egui};
 use bevy_rapier3d::prelude::*;
 use bevy_camera_shake::Shake3d;
+use bevy::gltf::Gltf;
+use bevy_scene_hook::{HookPlugin, SceneHook, HookedSceneBundle};
 
 mod asset_loading;
 mod assets;
@@ -17,6 +19,7 @@ mod game_controller;
 mod game_state;
 mod ingame;
 mod player;
+mod props;
 
 fn main() {
     App::new()
@@ -111,6 +114,9 @@ fn debug(
     mut game_assets: ResMut<assets::GameAssets>,
     mut shakeables: Query<&mut Shake3d>,
     mut rapier: ResMut<RapierConfiguration>,
+    plates: Query<(Entity, &Parent, &Velocity), With<props::Plate>>,
+    parent_transforms: Query<&Transform>,
+    assets_gltf: Res<Assets<Gltf>>,
 //   mut velocities: Query<(Entity, &mut Velocity), Without<bull::Bull>>,
 ) {
     if keys.just_pressed(KeyCode::Q) {
@@ -149,6 +155,33 @@ fn debug(
 //          println!("{:?} V: {:?}", e, v);
 //      }
 //  }
+
+    if keys.just_pressed(KeyCode::O) {
+        println!("Pressed O");
+
+        for (entity, parent, velocity) in &plates {
+            println!("replacing a thing");
+            let transform = parent_transforms.get(parent.get()).unwrap().clone();
+            let velocity = velocity.clone();
+            commands.entity(entity).despawn_recursive();
+
+            if let Some(gltf) = assets_gltf.get(&game_assets.broken_plate.clone()) {
+                commands.spawn_bundle(HookedSceneBundle {
+                    scene: SceneBundle { scene: gltf.scenes[0].clone(), ..default() },
+                    hook: SceneHook::new(move |entity, cmds, mesh| {
+                        if let Some(name) = entity.get::<Name>().map(|t|t.as_str()) {
+                            if name.contains("plate") {
+                                use props::ComponentAdder;
+                                props::BrokenPlate::add_components(cmds); 
+                                cmds.insert(velocity.clone());
+                                cmds.insert(transform.clone());
+                            }
+                        }
+                    })
+                });
+            }
+        }
+    }
 }
 
 fn window_settings(mut windows: ResMut<Windows>) {

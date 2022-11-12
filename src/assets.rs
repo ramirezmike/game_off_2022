@@ -25,6 +25,7 @@ pub struct GameAssets {
     pub bull_charge: Handle<AnimationClip>,
     pub bull_collide: Handle<AnimationClip>,
     pub plate: Handle<Gltf>,
+    pub broken_plate: Handle<Gltf>,
     pub level_one: Handle<Gltf>,
 
     pub blip: Handle<AudioSource>,
