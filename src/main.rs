@@ -41,6 +41,7 @@ fn main() {
         .add_plugin(player::PlayerPlugin)
 
         .add_system(debug)
+//        .add_system(initial_damp_physics)
         .add_startup_system(window_settings)
         .add_state(AppState::Initial)
         .insert_resource(bevy_egui::EguiSettings { scale_factor: 1.8, ..default() })
@@ -109,6 +110,8 @@ fn debug(
     mut assets_handler: asset_loading::AssetsHandler,
     mut game_assets: ResMut<assets::GameAssets>,
     mut shakeables: Query<&mut Shake3d>,
+    mut rapier: ResMut<RapierConfiguration>,
+//   mut velocities: Query<(Entity, &mut Velocity), Without<bull::Bull>>,
 ) {
     if keys.just_pressed(KeyCode::Q) {
         exit.send(AppExit);
@@ -124,6 +127,28 @@ fn debug(
             shakeable.trauma = f32::min(shakeable.trauma + TRAUMA_AMOUNT, 1.0);
         }
     }
+
+    if keys.just_pressed(KeyCode::P) {
+        rapier.physics_pipeline_active = !rapier.physics_pipeline_active;
+        rapier.query_pipeline_active = !rapier.query_pipeline_active;
+
+        rapier.timestep_mode =  TimestepMode::Variable {
+            time_scale: 1.0,
+            max_dt: 1.0,
+            substeps: 1,
+        };
+//          timestep_mode: TimestepMode::Variable {
+//              max_dt: 1.0 / 60.0,
+//              time_scale: 1.0,
+//              substeps: 1,
+//          },
+    }
+
+//  for (e,v) in &mut velocities {
+//      if v.linvel.length() > 0.0 {
+//          println!("{:?} V: {:?}", e, v);
+//      }
+//  }
 }
 
 fn window_settings(mut windows: ResMut<Windows>) {
@@ -132,3 +157,33 @@ fn window_settings(mut windows: ResMut<Windows>) {
         //        window.set_mode(WindowMode::BorderlessFullscreen);
     }
 }
+
+#[derive(Component)]
+pub struct DampPhysics(f32);
+fn initial_damp_physics(
+    mut commands: Commands,
+    mut damps: Query<(Entity, &mut DampPhysics, &mut Velocity, &ReadMassProperties)>,
+    time: Res<Time>,
+) {
+    for (entity, mut damp, mut velocity, r) in &mut damps {
+        damp.0 -= time.delta_seconds(); 
+
+        println!("dampening {:?}, {:?}", velocity.linvel, velocity.angvel);
+        println!("{:?}", r);
+        velocity.linvel = velocity.linvel.normalize() * 0.0000001;
+        velocity.angvel = velocity.angvel.normalize() * 0.0000001;
+        commands.entity(entity).insert(
+            ColliderMassProperties::MassProperties(MassProperties {
+                principal_inertia: r.0.principal_inertia.normalize() * 0.0000001,
+                principal_inertia_local_frame: Quat::default(),
+                ..default()
+            })
+        );
+
+        if damp.0 < 0.0 {
+           commands.entity(entity).remove::<DampPhysics>();
+           commands.entity(entity).remove::<ColliderMassProperties>();
+        }
+    }
+}
+

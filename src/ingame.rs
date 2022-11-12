@@ -1,5 +1,6 @@
 use crate::{
     asset_loading, assets::GameAssets, cleanup, game_state, AppState, game_camera, player, bull, 
+    DampPhysics,
 };
 use bevy::prelude::*;
 use bevy::gltf::Gltf;
@@ -97,9 +98,17 @@ pub fn setup(
     mut game_state: ResMut<game_state::GameState>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut camera: Query<&mut Transform, With<game_camera::PanOrbitCamera>>,
+    mut rapier: ResMut<RapierConfiguration>
 ) {
     println!("Setting up ingame!");
     game_state.title_screen_cooldown = 1.0;
+//  rapier.physics_pipeline_active = false;
+//  rapier.query_pipeline_active = false;
+//  rapier.timestep_mode =  TimestepMode::Variable {
+//      time_scale: 0.0,
+//      max_dt: 1.0,
+//      substeps: 0,
+//  };
 
 //  if let Some(gltf) = assets_gltf.get(&game_assets.matador.clone()) {
 //      .insert(CleanupMarker);
@@ -118,6 +127,11 @@ pub fn setup(
                            cmds.insert(Collider::from_bevy_mesh(mesh, &ComputedColliderShape::TriMesh).unwrap())
                                .insert(Wall);
                        }
+                   }
+                   if name.contains("invisible") {
+                       cmds.insert(Visibility {
+                           is_visible: false
+                       });
                    }
                    if name.contains("bull") {
                        cmds.insert(NoFrustumCulling)
@@ -145,10 +159,20 @@ pub fn setup(
                                .insert_bundle(TransformBundle::from(Transform::from_xyz(0.0, 1.0, 0.0)));
                        });
                    }
-                   if name.contains("dynamic") {
+                   if name.contains("dynamic") || name.contains("mug") {
                        if let Some(mesh) = mesh {
                            cmds.insert(Restitution::coefficient(0.2))
                                .insert(Collider::from_bevy_mesh(mesh, &ComputedColliderShape::TriMesh).unwrap())
+                               .insert(Velocity::default())
+                               //.insert(DampPhysics(2.0))
+                               //.insert(ReadMassProperties::default())
+                               .insert(Damping { linear_damping: 100.0, angular_damping: 100.0 })
+                               .insert(Sleeping {
+                                   linear_threshold: 15000.0,
+                                   angular_threshold: 15000.0,
+                                   sleeping: true,
+                                   ..default()
+                               })
                                .insert(RigidBody::Dynamic);
                        }
                    }
@@ -158,6 +182,7 @@ pub fn setup(
                            .insert(Restitution::coefficient(0.9))
                            .insert(ColliderMassProperties::Density(0.01))
                            .insert(Collider::cuboid(1.0, 0.05, 1.0))
+                           //.insert(DampPhysics(2.0))
                            .insert(RigidBody::Dynamic);
                    }
 
