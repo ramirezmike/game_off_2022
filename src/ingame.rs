@@ -140,8 +140,8 @@ pub fn setup(
                            .insert(Velocity::default())
                            .insert(LockedAxes::ROTATION_LOCKED_X | LockedAxes::ROTATION_LOCKED_Z | LockedAxes::ROTATION_LOCKED_Y) 
                            .insert(Ccd::enabled())
-                           .insert(ActiveEvents::CONTACT_FORCE_EVENTS)
-                           .insert(ContactForceEventThreshold(3000.0))
+//                         .insert(ActiveEvents::CONTACT_FORCE_EVENTS)
+//                         .insert(ContactForceEventThreshold(3000.0))
                            .insert(RigidBody::Dynamic)
                            .insert(bull::Bull::default());
                    }

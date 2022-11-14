@@ -42,6 +42,7 @@ fn main() {
         .add_plugin(game_state::GameStatePlugin)
         .add_plugin(ingame::InGamePlugin)
         .add_plugin(player::PlayerPlugin)
+        .add_plugin(props::PropsPlugin)
 
         .add_system(debug)
 //        .add_system(initial_damp_physics)

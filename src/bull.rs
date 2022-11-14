@@ -91,7 +91,6 @@ impl Default for Bull {
     }
 }
 
-
 fn handle_collisions(
     mut contact_force_events: EventReader<ContactForceEvent>,
     mut bulls: Query<(&mut Bull, &mut Velocity)>,
@@ -99,10 +98,11 @@ fn handle_collisions(
     mut shakeables: Query<&mut Shake3d>,
 ) {
     for e in contact_force_events.iter() {
-        println!("e: {}", e.total_force_magnitude);
+//        println!("e: {}", e.total_force_magnitude);
         let is_wall = walls.get(e.collider1).is_ok() || walls.get(e.collider2).is_ok();
-        if is_wall {
-            println!("hit wall");
+        let is_bull = bulls.get(e.collider1).is_ok() || bulls.get(e.collider2).is_ok();
+        if is_wall && is_bull {
+//            println!("hit wall");
             for (mut bull, mut velocity) in &mut bulls {
                 if bull.state == BullState::Running {
                     for mut shakeable in shakeables.iter_mut() {
