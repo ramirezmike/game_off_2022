@@ -86,6 +86,7 @@ pub fn load(
     assets_handler.add_glb(&mut game_assets.plate, "models/plate.glb");
     assets_handler.add_glb(&mut game_assets.level_one, "models/level_one.glb");
     assets_handler.add_glb(&mut game_assets.broken_plate, "models/broken_plate.glb");
+    assets_handler.add_glb(&mut game_assets.broken_mug, "models/broken_mug.glb");
 }
 
 #[derive(Component)]
@@ -160,7 +161,7 @@ pub fn setup(
                                .insert_bundle(TransformBundle::from(Transform::from_xyz(0.0, 1.0, 0.0)));
                        });
                    }
-                   if name.contains("dynamic") || name.contains("mug") {
+                   if name.contains("dynamic") {
                        if let Some(mesh) = mesh {
                            cmds.insert(Restitution::coefficient(0.2))
                                .insert(Collider::from_bevy_mesh(mesh, &ComputedColliderShape::TriMesh).unwrap())
@@ -176,6 +177,9 @@ pub fn setup(
                                })
                                .insert(RigidBody::Dynamic);
                        }
+                   }
+                   if name.contains("mug") {
+                       Mug::add_components(cmds);
                    }
                    if name.contains("plate") {
                        Plate::add_components(cmds);

@@ -22,6 +22,7 @@ impl Plugin for PropsPlugin {
 }
 
 
+//pub trait AddComponentFn = Fn(&mut EntityCommands);
 pub trait ComponentAdder {
     fn add_components(entity_commands: &mut EntityCommands);
 }
@@ -40,6 +41,10 @@ pub enum BreakableType {
 pub struct Plate;
 #[derive(Component)]
 pub struct BrokenPlate;
+#[derive(Component)]
+pub struct Mug;
+#[derive(Component)]
+pub struct BrokenMug;
 
 impl ComponentAdder for Plate {
     fn add_components(entity_commands: &mut EntityCommands) {
@@ -73,6 +78,39 @@ impl ComponentAdder for BrokenPlate {
     }
 }
 
+impl ComponentAdder for Mug {
+    fn add_components(entity_commands: &mut EntityCommands) {
+        entity_commands
+            .insert(Restitution::coefficient(0.9))
+            .insert(ColliderMassProperties::Density(0.01))
+            .insert(Collider::cuboid(0.3, 0.05, 0.3))
+            .insert(ActiveEvents::CONTACT_FORCE_EVENTS)
+            .insert(ContactForceEventThreshold(PROP_BREAK_THRESHOLD))
+            .insert(Breakable {
+                breakable_type: BreakableType::Mug,
+            })
+            .insert(Velocity::default())
+            .insert(Mug)
+            //.insert(DampPhysics(2.0))
+            .insert(RigidBody::Dynamic);
+    }
+}
+
+
+impl ComponentAdder for BrokenMug {
+    fn add_components(entity_commands: &mut EntityCommands) {
+        entity_commands
+            .insert(Restitution::coefficient(0.9))
+            .insert(ColliderMassProperties::Density(0.01))
+            .insert(Collider::cuboid(0.3, 0.05, 0.3))
+            .insert(Velocity::default())
+            .insert(BrokenMug)
+            //.insert(DampPhysics(2.0))
+            .insert(RigidBody::Dynamic);
+    }
+}
+
+
 fn handle_breakables(
     mut commands: Commands,
     breakables: Query<(&Breakable, &Transform, &Velocity)>,
@@ -90,8 +128,10 @@ fn handle_breakables(
                     let transform = transform.clone();
                     let velocity = velocity.clone();
                     let (asset, mesh_name, adder) = match breakable.breakable_type {
-                        BreakableType::Plate => (&game_assets.broken_plate, "plate", BrokenPlate::add_components),
-                        BreakableType::Mug => (&game_assets.broken_mug, "mug", BrokenPlate::add_components),
+                        BreakableType::Plate => (&game_assets.broken_plate, "plate", 
+                                           Box::new(BrokenPlate::add_components) as Box<dyn Fn(&mut EntityCommands) + Send + Sync>),
+                        BreakableType::Mug => (&game_assets.broken_mug, "mug", 
+                                           Box::new(BrokenMug::add_components) as Box<dyn Fn(&mut EntityCommands) + Send + Sync>),
                     };
 
                     if let Some(gltf) = assets_gltf.get(asset) {
