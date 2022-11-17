@@ -10,7 +10,7 @@ impl Plugin for GameControllerPlugin {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Resource)]
 pub struct GameController {
     pub players: Vec<Gamepad>,
     pub pressed: HashMap<usize, Vec<GameButton>>,
@@ -218,10 +218,11 @@ pub fn gamepad_connections(
         event_type,
     } in gamepad_evr.iter()
     {
-        if *event_type == GamepadEventType::Connected {
-            println!("New gamepad connected with ID: {:?}", gamepad);
-            controllers.players.push(*gamepad);
-        }
+// TODO: HEY DO THIS PLEASE        
+//      if *event_type == GamepadEventType::Connected {
+//          println!("New gamepad connected with ID: {:?}", gamepad);
+//          controllers.players.push(*gamepad);
+//      }
     }
 }
 

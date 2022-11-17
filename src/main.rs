@@ -1,7 +1,6 @@
 #![windows_subsystem = "windows"]
 use bevy::prelude::*;
 use bevy::app::AppExit;
-use bevy::asset::AssetServerSettings;
 use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::window::WindowMode;
 use bevy_inspector_egui::{WorldInspectorPlugin, egui, bevy_egui};
@@ -23,19 +22,22 @@ mod props;
 
 fn main() {
     App::new()
-        .insert_resource(AssetServerSettings {
-            watch_for_changes: true,
-            ..default()
+        .add_plugins(DefaultPlugins.set(AssetPlugin {
+          watch_for_changes: true,
+          ..default()
         })
-        .add_plugins(DefaultPlugins)
+         .set(WindowPlugin {
+          window: WindowDescriptor {
+            fit_canvas_to_parent: true,
+            ..default()
+          },
+          ..default()
+        })
+                     )
         .add_plugin(bull::BullPlugin)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         .add_plugin(RapierDebugRenderPlugin::default())
         .add_plugin(WorldInspectorPlugin::new())
-        .insert_resource(WindowDescriptor {
-            fit_canvas_to_parent: true,
-            ..default()
-        })
         .add_plugin(asset_loading::AssetLoadingPlugin)
         .add_plugin(assets::AssetsPlugin)
         .add_plugin(game_controller::GameControllerPlugin)

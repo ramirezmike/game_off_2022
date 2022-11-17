@@ -20,6 +20,7 @@ pub struct GameTexture {
     pub image: Handle<Image>,
 }
 
+#[derive(Resource)]
 pub struct NextState {
     state: AppState,
 }
@@ -31,7 +32,7 @@ impl Default for NextState {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Resource)]
 pub struct AssetsLoading {
     pub asset_handles: Vec<HandleUntyped>,
 }

@@ -11,6 +11,7 @@ impl Plugin for GameStatePlugin {
 #[derive(Component)]
 pub struct LevelOverCleanupMarker;
 
+#[derive(Resource)]
 pub struct GameState {
     pub score: usize,
     pub shadows_on: bool,

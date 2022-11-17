@@ -155,10 +155,11 @@ pub fn setup(
                        .insert(LockedAxes::ROTATION_LOCKED_X | LockedAxes::ROTATION_LOCKED_Z | LockedAxes::ROTATION_LOCKED_Y) 
                        .insert(Ccd::enabled())
                        .with_children(|children| {
-                           children.spawn()
-                               .insert(Collider::cuboid(0.2, 1.0, 0.2))
+                           children.spawn(
+                               (Collider::cuboid(0.2, 1.0, 0.2),
+                               TransformBundle::from(Transform::from_xyz(0.0, 1.0, 0.0)))
+                           );
                                // Position the collider relative to the rigid-body.
-                               .insert_bundle(TransformBundle::from(Transform::from_xyz(0.0, 1.0, 0.0)));
                        });
                    }
                    if name.contains("dynamic") {
@@ -225,8 +226,7 @@ pub fn setup(
 
     if camera.iter().len() == 0 {
         let shake_id = commands
-            .spawn()
-            .insert(Shake3d {
+            .spawn((Shake3d {
                 max_offset: Vec3::new(0.0, 0.0, 0.0),
                 max_yaw_pitch_roll: Vec3::new(0.1, 0.1, 0.1),
                 trauma: 0.0,
@@ -240,8 +240,8 @@ pub fn setup(
                     Box::new(MyRandom),
                     Box::new(MyRandom),
                 ],
-            })
-            .insert_bundle(SpatialBundle::default())
+            },
+            SpatialBundle::default()))
             .id();
 
         let camera_id =

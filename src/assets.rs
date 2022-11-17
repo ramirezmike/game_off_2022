@@ -10,7 +10,7 @@ impl Plugin for AssetsPlugin {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Resource)]
 pub struct GameAssets {
     pub font: Handle<Font>,
     pub matador: Handle<Gltf>,

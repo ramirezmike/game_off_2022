@@ -1,4 +1,3 @@
-use bevy::math::const_vec2;
 use bevy::prelude::*;
 use core::ops::{Add, AddAssign, Mul, Neg, Sub, SubAssign};
 
@@ -20,19 +19,19 @@ impl Direction {
     };
 
     pub const UP: Direction = Direction {
-        unit_vector: const_vec2!([1.0, 0.0]),
+        unit_vector: Vec2::from_array([1.0, 0.0]),
     };
 
     pub const DOWN: Direction = Direction {
-        unit_vector: const_vec2!([-1.0, 0.0]),
+        unit_vector: Vec2::from_array([-1.0, 0.0]),
     };
 
     pub const RIGHT: Direction = Direction {
-        unit_vector: const_vec2!([0.0, 1.0]),
+        unit_vector: Vec2::from_array([0.0, 1.0]),
     };
 
     pub const LEFT: Direction = Direction {
-        unit_vector: const_vec2!([0.0, -1.0]),
+        unit_vector: Vec2::from_array([0.0, -1.0]),
     };
 }
 
