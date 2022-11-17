@@ -87,6 +87,7 @@ pub fn load(
     assets_handler.add_glb(&mut game_assets.level_one, "models/level_one.glb");
     assets_handler.add_glb(&mut game_assets.broken_plate, "models/broken_plate.glb");
     assets_handler.add_glb(&mut game_assets.broken_mug, "models/broken_mug.glb");
+    assets_handler.add_font(&mut game_assets.font, "fonts/monogram.ttf");
 }
 
 #[derive(Component)]

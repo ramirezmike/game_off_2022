@@ -17,8 +17,11 @@ mod game_camera;
 mod game_controller;
 mod game_state;
 mod ingame;
+mod ingame_ui;
+mod menus;
 mod player;
 mod props;
+mod ui;
 
 fn main() {
     App::new()
@@ -43,8 +46,10 @@ fn main() {
         .add_plugin(game_controller::GameControllerPlugin)
         .add_plugin(game_state::GameStatePlugin)
         .add_plugin(ingame::InGamePlugin)
+        .add_plugin(ingame_ui::InGameUIPlugin)
         .add_plugin(player::PlayerPlugin)
         .add_plugin(props::PropsPlugin)
+        .add_plugin(ui::text_size::TextSizePlugin)
 
         .add_system(debug)
 //        .add_system(initial_damp_physics)
@@ -65,6 +70,7 @@ pub enum AppState {
     Options,
     InGame,
     Splash,
+    ScoreDisplay,
     LevelOver,
     ResetInGame,
     Loading,

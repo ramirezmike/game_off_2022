@@ -15,6 +15,7 @@ pub struct LevelOverCleanupMarker;
 pub struct GameState {
     pub score: usize,
     pub shadows_on: bool,
+    pub current_time: f32,
     pub graphics_high: bool,
     pub title_screen_cooldown: f32,
 }
@@ -24,6 +25,7 @@ impl GameState {
         GameState {
             score: 0,
             shadows_on: shadows_on,
+            current_time: 0.0,
             graphics_high: graphics,
             title_screen_cooldown: 1.0,
         }
@@ -32,11 +34,6 @@ impl GameState {
 
 impl Default for GameState {
     fn default() -> Self {
-        GameState {
-            score: 0,
-            shadows_on: true,
-            graphics_high: true,
-            title_screen_cooldown: 1.0,
-        }
+        GameState::initialize(true, true)
     }
 }

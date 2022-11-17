@@ -4,7 +4,9 @@ use bevy_rapier3d::prelude::*;
 use bevy::ecs::component::StorageType;
 use crate::{
     assets,
+    game_state,
     AppState,
+    ingame,
 };
 use bevy::gltf::Gltf;
 use bevy_scene_hook::{SceneHook, HookedSceneBundle};
@@ -16,8 +18,10 @@ impl Plugin for PropsPlugin {
     fn build(&self, app: &mut App) {
         app.add_system_set(
             SystemSet::on_update(AppState::InGame)
+                .with_system(handle_break_events)
                 .with_system(handle_breakables)
-           );
+           )
+           .add_event::<BreakEvent>();
     }
 }
 
@@ -26,6 +30,8 @@ impl Plugin for PropsPlugin {
 pub trait ComponentAdder {
     fn add_components(entity_commands: &mut EntityCommands);
 }
+
+pub struct BreakEvent;
 
 #[derive(Component)]
 pub struct Breakable {
@@ -59,6 +65,7 @@ impl ComponentAdder for Plate {
             })
             .insert(Velocity::default())
             .insert(Plate)
+            .insert(ingame::CleanupMarker)
             //.insert(DampPhysics(2.0))
             .insert(RigidBody::Dynamic);
     }
@@ -73,6 +80,7 @@ impl ComponentAdder for BrokenPlate {
             .insert(Collider::cuboid(0.3, 0.05, 0.3))
             .insert(Velocity::default())
             .insert(BrokenPlate)
+            .insert(ingame::CleanupMarker)
             //.insert(DampPhysics(2.0))
             .insert(RigidBody::Dynamic);
     }
@@ -90,6 +98,7 @@ impl ComponentAdder for Mug {
                 breakable_type: BreakableType::Mug,
             })
             .insert(Velocity::default())
+            .insert(ingame::CleanupMarker)
             .insert(Mug)
             //.insert(DampPhysics(2.0))
             .insert(RigidBody::Dynamic);
@@ -104,12 +113,21 @@ impl ComponentAdder for BrokenMug {
             .insert(ColliderMassProperties::Density(0.01))
             .insert(Collider::cuboid(0.3, 0.05, 0.3))
             .insert(Velocity::default())
+            .insert(ingame::CleanupMarker)
             .insert(BrokenMug)
             //.insert(DampPhysics(2.0))
             .insert(RigidBody::Dynamic);
     }
 }
 
+fn handle_break_events(
+    mut game_state: ResMut<game_state::GameState>,
+    mut break_event_reader: EventReader<BreakEvent>,
+) {
+    for _ in break_event_reader.iter() {
+        game_state.score += 1;
+    }
+}
 
 fn handle_breakables(
     mut commands: Commands,
@@ -117,6 +135,7 @@ fn handle_breakables(
     mut contact_force_events: EventReader<ContactForceEvent>,
     assets_gltf: Res<Assets<Gltf>>,
     game_assets: Res<assets::GameAssets>,
+    mut break_event_writer: EventWriter<BreakEvent>,
 ) {
     for e in contact_force_events.iter() {
         println!("contact force event {:?}", e.total_force_magnitude);
@@ -124,6 +143,7 @@ fn handle_breakables(
             .for_each(|entity| {
                 if let Ok((breakable, transform, velocity)) = breakables.get(*entity) {
                     println!("Got breakable {:?} {:?}", transform, velocity);
+                    break_event_writer.send(BreakEvent);
                     commands.entity(*entity).despawn_recursive();
                     let transform = transform.clone();
                     let velocity = velocity.clone();
@@ -135,7 +155,7 @@ fn handle_breakables(
                     };
 
                     if let Some(gltf) = assets_gltf.get(asset) {
-                        commands.spawn_bundle(HookedSceneBundle {
+                        commands.spawn(HookedSceneBundle {
                             scene: SceneBundle { scene: gltf.scenes[0].clone(), ..default() },
                             hook: SceneHook::new(move |entity, cmds, _| {
                                 if let Some(name) = entity.get::<Name>().map(|t|t.as_str()) {
