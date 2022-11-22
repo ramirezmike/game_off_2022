@@ -11,8 +11,7 @@ use crate::{
 use bevy::gltf::Gltf;
 use bevy_scene_hook::{SceneHook, HookedSceneBundle};
 
-const PROP_BREAK_THRESHOLD: f32 = 0.13;
-
+const PROP_BREAK_THRESHOLD: f32 = 0.00001;
 pub struct PropsPlugin;
 impl Plugin for PropsPlugin {
     fn build(&self, app: &mut App) {
@@ -138,7 +137,7 @@ fn handle_breakables(
     mut break_event_writer: EventWriter<BreakEvent>,
 ) {
     for e in contact_force_events.iter() {
-        println!("contact force event {:?}", e.total_force_magnitude);
+//        println!("contact force event {:?}", e.total_force_magnitude);
         [e.collider1, e.collider2].iter()
             .for_each(|entity| {
                 if let Ok((breakable, transform, velocity)) = breakables.get(*entity) {

@@ -80,7 +80,7 @@ impl Default for Bull {
         Bull {
             current_animation: Handle::<AnimationClip>::default(),
             state: BullState::Idle,
-            speed: 20.0,
+            speed: 25.0,
             rotation_speed: 1.0,
             friction: 0.01,
             random: rng.gen_range(0.5..1.0),
@@ -93,16 +93,22 @@ impl Default for Bull {
 
 fn handle_collisions(
     mut contact_force_events: EventReader<ContactForceEvent>,
-    mut bulls: Query<(&mut Bull, &mut Velocity)>,
-    walls: Query<&ingame::Wall>,
+    mut bulls: Query<(&mut Bull, &mut Velocity), Without<ingame::BullCollide>>,
+    mut bull_colliders: Query<(&mut ingame::BullCollide, Option<&mut ExternalForce>, Option<&mut ExternalImpulse>), Without<Bull>>,
     mut shakeables: Query<&mut Shake3d>,
 ) {
     for e in contact_force_events.iter() {
-//        println!("e: {}", e.total_force_magnitude);
-        let is_wall = walls.get(e.collider1).is_ok() || walls.get(e.collider2).is_ok();
+        println!("contact force event {:?}", e.total_force_magnitude);
+        let mut is_bull_collider = false;
+        for _ in bull_colliders.iter_many([e.collider1,e.collider2]) {
+            is_bull_collider = true; 
+        }
+
         let is_bull = bulls.get(e.collider1).is_ok() || bulls.get(e.collider2).is_ok();
-        if is_wall && is_bull {
+        println!("e: {} {} {}", e.total_force_magnitude, is_bull_collider, is_bull);
+        if is_bull_collider && is_bull {
 //            println!("hit wall");
+            let mut bull_velocity = Vec3::default();
             for (mut bull, mut velocity) in &mut bulls {
                 if bull.state == BullState::Running {
                     for mut shakeable in shakeables.iter_mut() {
@@ -110,10 +116,21 @@ fn handle_collisions(
                     }
                     bull.state = BullState::Collision;
                     bull.charging_cooldown = 1.0;
+                    bull_velocity = velocity.linvel;
 
                     velocity.linvel = -velocity.linvel;
                 }
             }
+
+//          for e in [e.collider1,e.collider2] {
+//              if let Ok((_, _force, impulse)) = bull_colliders.get_mut(e) {
+//                  if let Some(mut impulse) = impulse {
+//                      println!("Set velocity yo");
+//                      impulse.impulse = bull_velocity.normalize() * 1.5;
+//                      impulse.torque_impulse = (bull_velocity.normalize() * 1.5) / 10.0;
+//                  }
+//              }
+//          }
         }
     }
 }

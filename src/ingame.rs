@@ -9,6 +9,7 @@ use leafwing_input_manager::prelude::*;
 use rand::prelude::SliceRandom;
 use rand::{thread_rng, Rng};
 use std::f32::consts::TAU;
+use bevy_rapier3d::geometry::ColliderMassProperties;
 use bevy_camera_shake::{CameraShakePlugin, RandomSource, Shake3d};
 use bevy_rapier3d::prelude::*;
 use bevy_scene_hook::{HookPlugin, SceneHook, HookedSceneBundle};
@@ -91,7 +92,7 @@ pub fn load(
 }
 
 #[derive(Component)]
-pub struct Wall;
+pub struct BullCollide;
 
 pub fn setup(
     mut commands: Commands,
@@ -105,6 +106,7 @@ pub fn setup(
 ) {
     println!("Setting up ingame!");
     game_state.title_screen_cooldown = 1.0;
+//  rapier.gravity = Vec3::new(0.0, -9.81, 0.0);
 //  rapier.physics_pipeline_active = false;
 //  rapier.query_pipeline_active = false;
 //  rapier.timestep_mode =  TimestepMode::Variable {
@@ -128,7 +130,7 @@ pub fn setup(
                        if let Some(mesh) = mesh {
                            println!("adding collider");
                            cmds.insert(Collider::from_bevy_mesh(mesh, &ComputedColliderShape::TriMesh).unwrap())
-                               .insert(Wall);
+                               .insert(BullCollide);
                        }
                    }
                    if name.contains("invisible") {
@@ -137,13 +139,15 @@ pub fn setup(
                        });
                    }
                    if name.contains("bull") {
+                       let BULL_COLLISION_THRESHOLD: f32 = 0.40001;
                        cmds.insert(NoFrustumCulling)
-                           .insert(Collider::cuboid(1.0, 1.0, 1.0))
+                           .insert(Collider::cuboid(2.0, 2.0, 2.0))
+                           .insert(ColliderMassProperties::Density(5.0))
                            .insert(Velocity::default())
                            .insert(LockedAxes::ROTATION_LOCKED_X | LockedAxes::ROTATION_LOCKED_Z | LockedAxes::ROTATION_LOCKED_Y) 
                            .insert(Ccd::enabled())
-//                         .insert(ActiveEvents::CONTACT_FORCE_EVENTS)
-//                         .insert(ContactForceEventThreshold(3000.0))
+                           .insert(ActiveEvents::CONTACT_FORCE_EVENTS)
+                           .insert(ContactForceEventThreshold(BULL_COLLISION_THRESHOLD))
                            .insert(RigidBody::Dynamic)
                            .insert(bull::Bull::default());
                    }
@@ -170,15 +174,18 @@ pub fn setup(
                                .insert(Velocity::default())
                                //.insert(DampPhysics(2.0))
                                //.insert(ReadMassProperties::default())
-                               .insert(Damping { linear_damping: 100.0, angular_damping: 100.0 })
-                               .insert(Sleeping {
-                                   linear_threshold: 15000.0,
-                                   angular_threshold: 15000.0,
-                                   sleeping: true,
-                                   ..default()
-                               })
+                               //.insert(Damping { linear_damping: 100.0, angular_damping: 100.0 })
+//                             .insert(Sleeping {
+//                                 linear_threshold: 15000.0,
+//                                 angular_threshold: 15000.0,
+//                                 sleeping: true,
+//                                 ..default()
+//                             })
                                .insert(RigidBody::Dynamic);
                        }
+                   }
+                   if name.contains("collide") {
+                       cmds.insert((BullCollide, ExternalImpulse::default(), ExternalForce::default()));
                    }
                    if name.contains("mug") {
                        Mug::add_components(cmds);

@@ -38,7 +38,7 @@ fn main() {
         })
                      )
         .add_plugin(bull::BullPlugin)
-        .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
+        .add_plugin(RapierPhysicsPlugin::<NoUserData>::default().with_physics_scale(10.0))
         .add_plugin(RapierDebugRenderPlugin::default())
         .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(asset_loading::AssetLoadingPlugin)
