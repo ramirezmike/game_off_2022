@@ -16,10 +16,12 @@ mod direction;
 mod game_camera;
 mod game_controller;
 mod game_state;
+mod groups;
 mod ingame;
 mod ingame_ui;
 mod menus;
 mod player;
+mod shopkeeper;
 mod props;
 mod ui;
 
@@ -45,10 +47,12 @@ fn main() {
         .add_plugin(assets::AssetsPlugin)
         .add_plugin(game_controller::GameControllerPlugin)
         .add_plugin(game_state::GameStatePlugin)
+        .add_plugin(groups::GroupPlugin)
         .add_plugin(ingame::InGamePlugin)
         .add_plugin(ingame_ui::InGameUIPlugin)
         .add_plugin(player::PlayerPlugin)
         .add_plugin(props::PropsPlugin)
+        .add_plugin(shopkeeper::ShopKeeperPlugin)
         .add_plugin(ui::text_size::TextSizePlugin)
 
         .add_system(debug)
@@ -123,6 +127,7 @@ fn debug(
     mut game_assets: ResMut<assets::GameAssets>,
     mut shakeables: Query<&mut Shake3d>,
     mut rapier: ResMut<RapierConfiguration>,
+    mut restore_group_event_writer: EventWriter<groups::RestoreGroupEvent>,
     plates: Query<(Entity, &Parent, &Velocity), With<props::Plate>>,
     parent_transforms: Query<&Transform>,
     assets_gltf: Res<Assets<Gltf>>,
@@ -191,11 +196,18 @@ fn debug(
             }
         }
     }
+
+    if keys.just_pressed(KeyCode::G) {
+        println!("sending group event");
+        restore_group_event_writer.send(groups::RestoreGroupEvent {
+            group_id: 1
+        });
+    }
 }
 
 fn window_settings(mut windows: ResMut<Windows>) {
     for window in windows.iter_mut() {
-        window.set_title(String::from("Charlotte's Independence: The Road to Uptown"));
+        window.set_title(String::from(""));
         //        window.set_mode(WindowMode::BorderlessFullscreen);
     }
 }

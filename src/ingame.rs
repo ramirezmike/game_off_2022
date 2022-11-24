@@ -1,6 +1,6 @@
 use crate::{
     asset_loading, assets::GameAssets, cleanup, game_state, AppState, game_camera, player, bull, 
-    DampPhysics, props::*,
+    DampPhysics, props::*, groups, shopkeeper,
 };
 use bevy::prelude::*;
 use bevy::gltf::Gltf;
@@ -13,6 +13,7 @@ use bevy_rapier3d::geometry::ColliderMassProperties;
 use bevy_camera_shake::{CameraShakePlugin, RandomSource, Shake3d};
 use bevy_rapier3d::prelude::*;
 use bevy_scene_hook::{HookPlugin, SceneHook, HookedSceneBundle};
+use std::str::FromStr;
 
 pub struct InGamePlugin;
 impl Plugin for InGamePlugin {
@@ -126,6 +127,9 @@ pub fn setup(
            hook: SceneHook::new(move |entity, cmds, mesh| {
                if let Some(name) = entity.get::<Name>().map(|t|t.as_str()) {
                    println!("Name: {} Mesh: {:?}", name, mesh.is_some());
+
+                   shopkeeper::spawn(name, cmds);
+
                    if name.contains("static") {
                        if let Some(mesh) = mesh {
                            println!("adding collider");
@@ -186,6 +190,22 @@ pub fn setup(
                    }
                    if name.contains("collide") {
                        cmds.insert((BullCollide, ExternalImpulse::default(), ExternalForce::default()));
+                   }
+                   if name.contains("Group") {
+                       let split_by_group = name.split("Group")
+                                                .collect::<Vec::<_>>();
+                       let group_id = split_by_group.last()
+                                                    .expect("Group name missing ID");
+                       let group_id = usize::from_str(group_id)
+                                           .expect("Group ID not a number");
+
+                       println!("INSERT MARKER {} {}", name, group_id);
+                       cmds.insert(groups::GroupMarker(group_id));
+                       /* 
+                          need to break items that have groups
+                          then add a debug to throw event that restores the groups
+                          to where it was
+                      */
                    }
                    if name.contains("mug") {
                        Mug::add_components(cmds);

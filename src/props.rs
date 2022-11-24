@@ -51,22 +51,58 @@ pub struct Mug;
 #[derive(Component)]
 pub struct BrokenMug;
 
+fn add_dynamic_rapier_components_for_props(entity_commands: &mut EntityCommands) {
+    entity_commands
+            .insert(Restitution::coefficient(0.9))
+            .insert(ColliderMassProperties::Density(0.01))
+            .insert(CollisionGroups::default())
+            .insert(Velocity::default())
+            .insert(Visibility {
+                is_visible: true,
+            })
+            .insert(RigidBody::Dynamic);
+}
+
+pub fn restore_dynamic_rapier_components(entity_commands: &mut EntityCommands) {
+    entity_commands
+            .insert(CollisionGroups::default())
+            .insert(Velocity::default())
+            .insert(Visibility {
+                is_visible: true,
+            })
+            .insert(RigidBody::Dynamic);
+}
+
+fn remove_dynamic_rapier_components_for_props(entity_commands: &mut EntityCommands) {
+    entity_commands
+            .insert(CollisionGroups {
+                memberships: Group::NONE,
+                ..default()
+            })
+            .insert(Velocity::default())
+            .insert(Visibility {
+                is_visible: false,
+            })
+            .insert(RigidBody::Fixed);
+}
+
+fn add_breakable_rapier_components(entity_commands: &mut EntityCommands) {
+    entity_commands
+            .insert(ActiveEvents::CONTACT_FORCE_EVENTS)
+            .insert(ContactForceEventThreshold(PROP_BREAK_THRESHOLD));
+}
+
 impl ComponentAdder for Plate {
     fn add_components(entity_commands: &mut EntityCommands) {
         entity_commands
-            .insert(Restitution::coefficient(0.9))
-            .insert(ColliderMassProperties::Density(0.01))
             .insert(Collider::cuboid(0.3, 0.05, 0.3))
-            .insert(ActiveEvents::CONTACT_FORCE_EVENTS)
-            .insert(ContactForceEventThreshold(PROP_BREAK_THRESHOLD))
             .insert(Breakable {
                 breakable_type: BreakableType::Plate,
             })
-            .insert(Velocity::default())
             .insert(Plate)
-            .insert(ingame::CleanupMarker)
-            //.insert(DampPhysics(2.0))
-            .insert(RigidBody::Dynamic);
+            .insert(ingame::CleanupMarker);
+        add_dynamic_rapier_components_for_props(entity_commands);
+        add_breakable_rapier_components(entity_commands);
     }
 }
 
@@ -74,33 +110,24 @@ impl ComponentAdder for Plate {
 impl ComponentAdder for BrokenPlate {
     fn add_components(entity_commands: &mut EntityCommands) {
         entity_commands
-            .insert(Restitution::coefficient(0.9))
-            .insert(ColliderMassProperties::Density(0.01))
             .insert(Collider::cuboid(0.3, 0.05, 0.3))
-            .insert(Velocity::default())
             .insert(BrokenPlate)
-            .insert(ingame::CleanupMarker)
-            //.insert(DampPhysics(2.0))
-            .insert(RigidBody::Dynamic);
+            .insert(ingame::CleanupMarker);
+        add_dynamic_rapier_components_for_props(entity_commands);
     }
 }
 
 impl ComponentAdder for Mug {
     fn add_components(entity_commands: &mut EntityCommands) {
         entity_commands
-            .insert(Restitution::coefficient(0.9))
-            .insert(ColliderMassProperties::Density(0.01))
             .insert(Collider::cuboid(0.3, 0.05, 0.3))
-            .insert(ActiveEvents::CONTACT_FORCE_EVENTS)
-            .insert(ContactForceEventThreshold(PROP_BREAK_THRESHOLD))
             .insert(Breakable {
                 breakable_type: BreakableType::Mug,
             })
-            .insert(Velocity::default())
             .insert(ingame::CleanupMarker)
-            .insert(Mug)
-            //.insert(DampPhysics(2.0))
-            .insert(RigidBody::Dynamic);
+            .insert(Mug);
+        add_dynamic_rapier_components_for_props(entity_commands);
+        add_breakable_rapier_components(entity_commands);
     }
 }
 
@@ -108,14 +135,10 @@ impl ComponentAdder for Mug {
 impl ComponentAdder for BrokenMug {
     fn add_components(entity_commands: &mut EntityCommands) {
         entity_commands
-            .insert(Restitution::coefficient(0.9))
-            .insert(ColliderMassProperties::Density(0.01))
             .insert(Collider::cuboid(0.3, 0.05, 0.3))
-            .insert(Velocity::default())
             .insert(ingame::CleanupMarker)
-            .insert(BrokenMug)
-            //.insert(DampPhysics(2.0))
-            .insert(RigidBody::Dynamic);
+            .insert(BrokenMug);
+        add_dynamic_rapier_components_for_props(entity_commands);
     }
 }
 
@@ -141,9 +164,11 @@ fn handle_breakables(
         [e.collider1, e.collider2].iter()
             .for_each(|entity| {
                 if let Ok((breakable, transform, velocity)) = breakables.get(*entity) {
-                    println!("Got breakable {:?} {:?}", transform, velocity);
                     break_event_writer.send(BreakEvent);
-                    commands.entity(*entity).despawn_recursive();
+
+                    let mut entity_commands = commands.entity(*entity);
+                    remove_dynamic_rapier_components_for_props(&mut entity_commands);
+
                     let transform = transform.clone();
                     let velocity = velocity.clone();
                     let (asset, mesh_name, adder) = match breakable.breakable_type {
