@@ -6,6 +6,7 @@ use crate::{
 use std::collections::HashMap;
 
 const DUST_RATE: f32 = 0.2;
+const REPAIR_TIME: f32 = 1.0;
 pub struct ShopKeeperPlugin;
 impl Plugin for ShopKeeperPlugin {
     fn build(&self, app: &mut App) {
@@ -17,6 +18,11 @@ impl Plugin for ShopKeeperPlugin {
     }
 }
 
+enum ShopKeeperState {
+    Normal,
+    Repairing(usize, f32),
+}
+
 #[derive(Component)]
 struct ShopKeeper {
     pub speed: f32,
@@ -24,6 +30,7 @@ struct ShopKeeper {
     pub friction: f32,
     pub velocity: Vec3,
     pub cleanup_cooldown: f32,
+    pub state: ShopKeeperState,
     pub dust_cooldown: f32,
     pub current_animation: Handle<AnimationClip>,
     pub target: Option::<(usize, Vec3)>,
@@ -37,6 +44,7 @@ impl Default for ShopKeeper {
             rotation_speed: 1.0,
             friction: 0.01,
             velocity: Vec3::default(),
+            state: ShopKeeperState::Normal,
             cleanup_cooldown: 10.0,
             current_animation: Handle::<AnimationClip>::default(),
             dust_cooldown: 0.0,
@@ -64,6 +72,31 @@ fn move_shopkeepers(
     mut dust_spawn_event_writer: EventWriter<dust::DustSpawnEvent>,
 ) {
     for (entity, mut keeper, mut keeper_transform) in &mut shopkeepers {
+        match keeper.state {
+            ShopKeeperState::Repairing(group_id, remaining_time) => {
+                let remaining_time = remaining_time - time.delta_seconds();
+
+                if remaining_time <= 0.0 {
+                    restore_group_event_writer.send(groups::RestoreGroupEvent {
+                        group_id
+                    });
+
+                    // go to first spot or just wait
+                    if group_id != 0 {
+                        keeper.target = Some((0, keeper.initial_position.expect("Initial position missing")));
+                    } else {
+                        keeper.target = None;
+                    }
+
+                    keeper.cleanup_cooldown = 0.0;
+                    keeper.state = ShopKeeperState::Normal;
+                } else {
+                    keeper.state = ShopKeeperState::Repairing(group_id, remaining_time);
+                    continue;
+                }
+            },
+            _ => ()
+        }
         if keeper.initial_position.is_none() {
             keeper.initial_position = Some(keeper_transform.translation);
         }
@@ -79,16 +112,17 @@ fn move_shopkeepers(
             if keeper_transform.translation.distance(target) < 0.8 {
 
                 // println!("AT TARGET {:?} {:?}", keeper_transform.translation, target);
-                restore_group_event_writer.send(groups::RestoreGroupEvent {
-                    group_id
+                keeper.state = ShopKeeperState::Repairing(group_id, REPAIR_TIME);
+                dust_spawn_event_writer.send(dust::DustSpawnEvent {
+                    position: keeper_transform.translation,
+                    count: 10,
+                    spread: 6.0,
+                    rate: 0.5,
+                    dust_time_to_live: 3.0,
+                    emitter_time_to_live: REPAIR_TIME,
+                    size: 2.0,
+                    ..default()
                 });
-
-                // go to first spot or just wait
-                if group_id != 0 {
-                    keeper.target = Some((0, keeper.initial_position.expect("Initial position missing")));
-                } else {
-                    keeper.target = None;
-                }
             } else {
                 //println!("Moving to target? {} to {}", keeper_transform.translation, target);
                 let direction = target - keeper_transform.translation;
@@ -146,7 +180,7 @@ fn think_shopkeepers(
     group_members: Query<(&groups::GroupMember, &Transform, &GlobalTransform)>,
 ) {
     for (_, mut keeper) in &mut shopkeepers {
-        if keeper.target.is_some() { continue; }
+        if keeper.target.is_some() && keeper.target.unwrap().0 != 0 { continue; }
 
         keeper.cleanup_cooldown -= time.delta_seconds();
         keeper.cleanup_cooldown = keeper.cleanup_cooldown.clamp(0.0, 10.0);
