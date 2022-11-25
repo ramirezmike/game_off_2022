@@ -14,6 +14,9 @@ use bevy_camera_shake::{CameraShakePlugin, RandomSource, Shake3d};
 use bevy_rapier3d::prelude::*;
 use bevy_scene_hook::{HookPlugin, SceneHook, HookedSceneBundle};
 use std::str::FromStr;
+use bevy_mod_outline::{
+OutlineBundle, OutlineVolume,
+};
 
 pub struct InGamePlugin;
 impl Plugin for InGamePlugin {
@@ -191,6 +194,26 @@ pub fn setup(
 //                             })
                                .insert(RigidBody::Dynamic);
                        }
+                   }
+                   if name.contains("boutline") {
+                       cmds.insert(OutlineBundle {
+                            outline: OutlineVolume {
+                                visible: true,
+                                width: 3.0,
+                                colour: Color::WHITE,
+                            },
+                            ..default()
+                        });
+                   }
+                   if name.contains("routline") {
+                       cmds.insert(OutlineBundle {
+                            outline: OutlineVolume {
+                                visible: true,
+                                width: 3.0,
+                                colour: Color::RED,
+                            },
+                            ..default()
+                        });
                    }
                    if name.contains("collide") {
                        cmds.insert((BullCollide, ExternalImpulse::default(), ExternalForce::default()));

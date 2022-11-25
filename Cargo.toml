@@ -21,3 +21,4 @@ bevy-inspector-egui = { git = "https://github.com/jakobhellermann/bevy-inspector
 bevy_rapier3d = { git = "https://github.com/devil-ira/bevy_rapier", branch = "bevy-0.9", features = ["debug-render", "enhanced-determinism"] }
 bevy-scene-hook = { git = "https://github.com/ramirezmike/bevy-scene-hook?rev=511c0a3eeb958686aa590ccf7743dc9137ffe5eb" }
 bevy_camera_shake = { git = "https://github.com/Andrewp2/bevy_camera_shake?rev=04caaa4d4597fecfce0afc142be56b709366f35a" }
+bevy_mod_outline = "0.3.0"

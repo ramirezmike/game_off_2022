@@ -8,6 +8,10 @@ use bevy_rapier3d::prelude::*;
 use bevy_camera_shake::Shake3d;
 use bevy::gltf::Gltf;
 use bevy_scene_hook::{HookPlugin, SceneHook, HookedSceneBundle};
+use bevy_mod_outline::{
+    AutoGenerateOutlineNormalsPlugin, OutlinePlugin, 
+};
+
 
 mod asset_loading;
 mod assets;
@@ -44,6 +48,8 @@ fn main() {
         .add_plugin(bull::BullPlugin)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default().with_physics_scale(10.0))
         .add_plugin(RapierDebugRenderPlugin::default())
+        .add_plugin(OutlinePlugin)
+        .add_plugin(AutoGenerateOutlineNormalsPlugin)
         .add_plugin(billboard::BillboardPlugin)
         .add_plugin(dust::DustPlugin)
         .add_plugin(WorldInspectorPlugin::new())
