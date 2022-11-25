@@ -136,6 +136,8 @@ fn handle_collisions(
                         size: 2.0,
                         ..default()
                     });
+                } else {
+                    bull.heading_to = None;
                 }
             }
 
