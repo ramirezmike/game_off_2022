@@ -13,7 +13,7 @@ pub struct LevelOverCleanupMarker;
 
 #[derive(Resource)]
 pub struct GameState {
-    pub score: usize,
+    pub score: f32,
     pub shadows_on: bool,
     pub current_time: f32,
     pub graphics_high: bool,
@@ -23,8 +23,8 @@ pub struct GameState {
 impl GameState {
     pub fn initialize(graphics: bool, shadows_on: bool) -> Self {
         GameState {
-            score: 0,
-            shadows_on: shadows_on,
+            score: 1.0,
+            shadows_on,
             current_time: 0.0,
             graphics_high: graphics,
             title_screen_cooldown: 1.0,

@@ -96,7 +96,10 @@ pub fn load(
 
     assets_handler.add_standard_mesh(&mut game_assets.dust, Mesh::from(shape::Plane { size: 2.0 }));
 
-    assets_handler.add_material(&mut game_assets.cloud_texture, "cloud.png", true);
+    assets_handler.add_material(&mut game_assets.cloud_texture, "textures/cloud.png", true);
+    assets_handler.add_material(&mut game_assets.star_full_texture, "textures/star_full.png", true);
+    assets_handler.add_material(&mut game_assets.star_half_texture, "textures/star_half.png", true);
+    assets_handler.add_material(&mut game_assets.star_empty_texture, "textures/star_empty.png", true);
 }
 
 #[derive(Component)]

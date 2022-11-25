@@ -17,7 +17,7 @@ impl Plugin for PropsPlugin {
     fn build(&self, app: &mut App) {
         app.add_system_set(
             SystemSet::on_update(AppState::InGame)
-                .with_system(handle_break_events)
+                //.with_system(handle_break_events)
                 .with_system(handle_breakables)
            )
            .add_event::<BreakEvent>();
@@ -147,7 +147,7 @@ fn handle_break_events(
     mut break_event_reader: EventReader<BreakEvent>,
 ) {
     for _ in break_event_reader.iter() {
-        game_state.score += 1;
+        //game_state.score += 1;
     }
 }
 

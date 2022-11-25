@@ -28,6 +28,7 @@ mod ingame_ui;
 mod menus;
 mod player;
 mod shopkeeper;
+mod score;
 mod props;
 mod ui;
 
@@ -62,6 +63,7 @@ fn main() {
         .add_plugin(ingame_ui::InGameUIPlugin)
         .add_plugin(player::PlayerPlugin)
         .add_plugin(props::PropsPlugin)
+        .add_plugin(score::ScorePlugin)
         .add_plugin(shopkeeper::ShopKeeperPlugin)
         .add_plugin(ui::text_size::TextSizePlugin)
 

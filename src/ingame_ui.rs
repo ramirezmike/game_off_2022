@@ -2,8 +2,8 @@ use crate::{
     assets::GameAssets, game_state, menus, AppState, ui::text_size, ingame
 };
 use bevy::prelude::*;
-use bevy::ui::BackgroundColor;
 
+const STAR_SIZE: f32 = 60.0;
 pub struct InGameUIPlugin;
 impl Plugin for InGameUIPlugin {
     fn build(&self, app: &mut App) {
@@ -15,13 +15,25 @@ impl Plugin for InGameUIPlugin {
     }
 }
 
+#[derive(Component)]
+struct Star(usize);
+
 fn update_ui(
     game_state: Res<game_state::GameState>,
-    mut score_indicators: Query<&mut Text, (With<ScoreIndicator>, Without<TimeIndicator>)>,
+    game_assets: Res<GameAssets>,
+    mut stars: Query<(&mut UiImage, &Star)>,
     mut time_indicators: Query<&mut Text, (With<TimeIndicator>, Without<ScoreIndicator>)>,
 ) {
-    for mut text in score_indicators.iter_mut() {
-        text.sections[0].value = game_state.score.to_string();
+    let current_score = game_state.score * 5.0;
+    for (mut image, star) in stars.iter_mut() {
+        let star_value = star.0 as f32;
+        if star_value + 0.5 < current_score {
+            image.0 = game_assets.star_full_texture.image.clone();
+        } else if star_value < current_score {
+            image.0 = game_assets.star_half_texture.image.clone();
+        } else {
+            image.0 = game_assets.star_empty_texture.image.clone();
+        }
     }
 
     for mut text in time_indicators.iter_mut() {
@@ -38,7 +50,7 @@ fn setup(
 ) {
     println!("Setting up UI");
     commands
-        .spawn_bundle(NodeBundle {
+        .spawn(NodeBundle {
             style: Style {
                 size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
                 position_type: PositionType::Absolute,
@@ -53,12 +65,17 @@ fn setup(
         .insert(ingame::CleanupMarker)
         .with_children(|parent| {
             parent
-                .spawn_bundle(NodeBundle {
+                .spawn(NodeBundle {
                     style: Style {
-                        size: Size::new(Val::Percent(100.0), Val::Percent(15.0)),
+                        size: Size::new(Val::Percent(50.0), Val::Percent(15.0)),
                         position_type: PositionType::Relative,
                         justify_content: JustifyContent::Center,
-                        align_items: AlignItems::FlexEnd,
+                        margin: UiRect {
+                            left: Val::Auto,
+                            right: Val::Auto,
+                            ..default()
+                        },
+                        align_items: AlignItems::Center,
                         flex_direction: FlexDirection::Row,
                         ..Default::default()
                     },
@@ -66,20 +83,37 @@ fn setup(
                     ..Default::default()
                 })
                 .with_children(|parent| {
-                    add_title(
-                        parent,
-                        game_assets.font.clone(),
-                        text_scaler.scale(menus::DEFAULT_FONT_SIZE * 1.2),
-                        "Score: ",
-                        Vec::<ingame::CleanupMarker>::new(), // just an empty vec since can't do <impl Trait>
-                    );
-                    add_title(
-                        parent,
-                        game_assets.font.clone(),
-                        text_scaler.scale(menus::DEFAULT_FONT_SIZE * 1.2),
-                        "0",
-                        vec!(ScoreIndicator), // just an empty vec since can't do <impl Trait>
-                    );
+                    for i in 0..5 {
+                        parent 
+                             .spawn(NodeBundle {
+                                 style: Style {
+                                     size: Size::new(Val::Percent(20.0), Val::Percent(33.0)),
+                                     position_type: PositionType::Relative,
+                                     justify_content: JustifyContent::Center,
+                                     align_items: AlignItems::Center,
+                                     flex_direction: FlexDirection::Row,
+                                     margin: UiRect {
+                                         left: Val::Auto,
+                                         right: Val::Auto,
+                                         ..Default::default()
+                                     },
+                                     ..Default::default()
+                                 },
+                                 background_color: Color::NONE.into(),
+                                 ..Default::default()
+                             })
+                             .with_children(|parent| {
+                                 parent.spawn(ImageBundle {
+                                     style: Style {
+                                         size: Size::new(Val::Percent(STAR_SIZE), Val::Auto),
+                                         ..Default::default()
+                                     },
+                                     image: game_assets.star_full_texture.image.clone().into(),
+                                     ..Default::default()
+                                 })
+                                 .insert(Star(i));
+                             });
+                    }
                 });
             parent
                 .spawn_bundle(NodeBundle {
