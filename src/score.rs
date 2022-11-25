@@ -8,10 +8,18 @@ pub struct ScorePlugin;
 impl Plugin for ScorePlugin {
     fn build(&self, app: &mut App) {
         app.add_system_set(SystemSet::on_update(AppState::InGame)
+           .with_system(track_round_time)
            .with_system(check_score)
         );
 
     }
+}
+
+fn track_round_time(
+    mut game_state: ResMut<game_state::GameState>,
+    time: Res<Time>,
+) {
+    game_state.current_time -= time.delta_seconds();
 }
 
 fn check_score(
@@ -54,22 +62,14 @@ fn check_score(
     }
 
     if group_count > 0 {
-        game_state.score = 1.0 - (group_broken_count as f32 / group_count as f32);
+        game_state.score_check_count += 1;
+        let current = 1.0 - (group_broken_count as f32 / group_count as f32);
+        // add as a running average of the score
+        game_state.score = (game_state.score * (game_state.score_check_count - 1) as f32 + current) 
+                            / game_state.score_check_count as f32;
         println!("Score {} ( {} / {} )", game_state.score, group_broken_count, group_count);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
