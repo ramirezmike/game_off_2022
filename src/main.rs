@@ -12,7 +12,9 @@ use bevy_scene_hook::{HookPlugin, SceneHook, HookedSceneBundle};
 mod asset_loading;
 mod assets;
 mod bull;
+mod billboard;
 mod direction;
+mod dust;
 mod game_camera;
 mod game_controller;
 mod game_state;
@@ -42,6 +44,8 @@ fn main() {
         .add_plugin(bull::BullPlugin)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default().with_physics_scale(10.0))
         .add_plugin(RapierDebugRenderPlugin::default())
+        .add_plugin(billboard::BillboardPlugin)
+        .add_plugin(dust::DustPlugin)
         .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(asset_loading::AssetLoadingPlugin)
         .add_plugin(assets::AssetsPlugin)
@@ -131,6 +135,7 @@ fn debug(
     plates: Query<(Entity, &Parent, &Velocity), With<props::Plate>>,
     parent_transforms: Query<&Transform>,
     assets_gltf: Res<Assets<Gltf>>,
+    mut dust_spawn_event_writer: EventWriter<dust::DustSpawnEvent>,
 //   mut velocities: Query<(Entity, &mut Velocity), Without<bull::Bull>>,
 ) {
     if keys.just_pressed(KeyCode::Q) {
@@ -201,6 +206,19 @@ fn debug(
         println!("sending group event");
         restore_group_event_writer.send(groups::RestoreGroupEvent {
             group_id: 1
+        });
+    }
+
+    if keys.just_pressed(KeyCode::C) {
+        dust_spawn_event_writer.send(dust::DustSpawnEvent {
+            position: Vec3::new(0.0, 0.5, 0.0),
+            count: 10,
+            spread: 6.0,
+            rate: 0.5,
+            dust_time_to_live: 3.0,
+            emitter_time_to_live: 0.0,
+            size: 2.0,
+            ..default()
         });
     }
 }

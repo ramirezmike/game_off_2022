@@ -1,10 +1,11 @@
 use bevy::prelude::*;
 use bevy::ecs::system::EntityCommands;
 use crate::{
-    AppState, assets::GameAssets, game_state, groups, ZeroSignum
+    AppState, assets::GameAssets, game_state, groups, ZeroSignum, dust,
 };
 use std::collections::HashMap;
 
+const DUST_RATE: f32 = 0.2;
 pub struct ShopKeeperPlugin;
 impl Plugin for ShopKeeperPlugin {
     fn build(&self, app: &mut App) {
@@ -23,6 +24,7 @@ struct ShopKeeper {
     pub friction: f32,
     pub velocity: Vec3,
     pub cleanup_cooldown: f32,
+    pub dust_cooldown: f32,
     pub current_animation: Handle<AnimationClip>,
     pub target: Option::<(usize, Vec3)>,
     pub initial_position: Option::<Vec3>,
@@ -37,6 +39,7 @@ impl Default for ShopKeeper {
             velocity: Vec3::default(),
             cleanup_cooldown: 10.0,
             current_animation: Handle::<AnimationClip>::default(),
+            dust_cooldown: 0.0,
             target: None,
             initial_position: None,
         }
@@ -58,6 +61,7 @@ fn move_shopkeepers(
     time: Res<Time>,
     game_assets: ResMut<GameAssets>,
     mut restore_group_event_writer: EventWriter<groups::RestoreGroupEvent>,
+    mut dust_spawn_event_writer: EventWriter<dust::DustSpawnEvent>,
 ) {
     for (entity, mut keeper, mut keeper_transform) in &mut shopkeepers {
         if keeper.initial_position.is_none() {
@@ -74,7 +78,7 @@ fn move_shopkeepers(
             let target = Vec3::new(target.x, 0.0, target.z);
             if keeper_transform.translation.distance(target) < 0.8 {
 
-                println!("AT TARGET {:?} {:?}", keeper_transform.translation, target);
+                // println!("AT TARGET {:?} {:?}", keeper_transform.translation, target);
                 restore_group_event_writer.send(groups::RestoreGroupEvent {
                     group_id
                 });
@@ -86,24 +90,36 @@ fn move_shopkeepers(
                     keeper.target = None;
                 }
             } else {
-                println!("Moving to target? {} to {}", keeper_transform.translation, target);
+                //println!("Moving to target? {} to {}", keeper_transform.translation, target);
                 let direction = target - keeper_transform.translation;
                 let acceleration = Vec3::from(direction);
 
                 keeper.velocity += (acceleration.zero_signum() * speed) * time.delta_seconds();
                 keeper.velocity = keeper.velocity.clamp_length_max(speed);
+
+                let angle = (-(target.z - keeper_transform.translation.z))
+                    .atan2(target.x - keeper_transform.translation.x);
+                let rotation = Quat::from_axis_angle(Vec3::Y, angle);
+
+                if !rotation.is_nan() {
+                    keeper_transform.rotation = rotation;
+                }
+
+                keeper.dust_cooldown -= time.delta_seconds();
+                keeper.dust_cooldown = keeper.dust_cooldown.clamp(0.0, 10.0);
+                if keeper.dust_cooldown <= 0.0 {
+                    dust_spawn_event_writer.send(dust::DustSpawnEvent {
+                        position: keeper_transform.translation,
+                        count: 1,
+                        ..default()
+                    });
+                    keeper.dust_cooldown = DUST_RATE;
+                }
             }
         }
             
         let new_translation = keeper_transform.translation + (keeper.velocity * time.delta_seconds());
         keeper_transform.translation = new_translation;
-        let angle = (-(new_translation.z - keeper_transform.translation.z))
-            .atan2(new_translation.x - keeper_transform.translation.x);
-        let rotation = Quat::from_axis_angle(Vec3::Y, angle);
-
-        if !rotation.is_nan() {
-            keeper_transform.rotation = rotation;
-        }
 
         let mut animation = animations.get_mut(entity).unwrap();
         if keeper.velocity.length() > 1.0 {

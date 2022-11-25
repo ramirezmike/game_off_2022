@@ -32,4 +32,6 @@ pub struct GameAssets {
     pub blip: Handle<AudioSource>,
 
     pub bevy_icon: asset_loading::GameTexture,
+    pub cloud_texture: asset_loading::GameTexture,
+    pub dust: Handle<Mesh>,
 }

@@ -1,6 +1,6 @@
 use crate::{
     asset_loading, assets::GameAssets, cleanup, game_state, AppState, game_camera, player, bull, 
-    DampPhysics, props::*, groups, shopkeeper,
+    DampPhysics, props::*, groups, shopkeeper, billboard,
 };
 use bevy::prelude::*;
 use bevy::gltf::Gltf;
@@ -90,6 +90,10 @@ pub fn load(
     assets_handler.add_glb(&mut game_assets.broken_plate, "models/broken_plate.glb");
     assets_handler.add_glb(&mut game_assets.broken_mug, "models/broken_mug.glb");
     assets_handler.add_font(&mut game_assets.font, "fonts/monogram.ttf");
+
+    assets_handler.add_standard_mesh(&mut game_assets.dust, Mesh::from(shape::Plane { size: 2.0 }));
+
+    assets_handler.add_material(&mut game_assets.cloud_texture, "cloud.png", true);
 }
 
 #[derive(Component)]
@@ -103,7 +107,7 @@ pub fn setup(
     mut game_state: ResMut<game_state::GameState>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut camera: Query<&mut Transform, With<game_camera::PanOrbitCamera>>,
-    mut rapier: ResMut<RapierConfiguration>
+    mut rapier: ResMut<RapierConfiguration>,
 ) {
     println!("Setting up ingame!");
     game_state.title_screen_cooldown = 1.0;

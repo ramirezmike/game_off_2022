@@ -11,9 +11,12 @@ use crate::{
     ZeroSignum,
     player,
     ingame,
+    dust,
 };
 
 const TRAUMA_AMOUNT: f32 = 0.5;
+const DUST_RATE: f32 = 0.3;
+const CHARGE_DUST_RATE: f32 = 0.5;
 pub struct BullPlugin;
 impl Plugin for BullPlugin {
     fn build(&self, app: &mut App) {
@@ -63,6 +66,7 @@ pub struct Bull {
     pub friction: f32,
     pub mind_cooldown: f32,
     pub heading_to: Option::<Vec2>,
+    pub dust_cooldown: f32,
     pub charging_cooldown: f32,
 }
 
@@ -86,6 +90,7 @@ impl Default for Bull {
             random: rng.gen_range(0.5..1.0),
             mind_cooldown: 0.0,
             charging_cooldown: 0.0,
+            dust_cooldown: 0.0,
             heading_to: None,
         }
     }
@@ -93,9 +98,10 @@ impl Default for Bull {
 
 fn handle_collisions(
     mut contact_force_events: EventReader<ContactForceEvent>,
-    mut bulls: Query<(&mut Bull, &mut Velocity), Without<ingame::BullCollide>>,
+    mut bulls: Query<(&mut Bull, &mut Velocity, &Transform), Without<ingame::BullCollide>>,
     mut bull_colliders: Query<(&mut ingame::BullCollide, Option<&mut ExternalForce>, Option<&mut ExternalImpulse>), Without<Bull>>,
     mut shakeables: Query<&mut Shake3d>,
+    mut dust_spawn_event_writer: EventWriter<dust::DustSpawnEvent>,
 ) {
     for e in contact_force_events.iter() {
         println!("contact force event {:?}", e.total_force_magnitude);
@@ -109,7 +115,7 @@ fn handle_collisions(
         if is_bull_collider && is_bull {
 //            println!("hit wall");
             let mut bull_velocity = Vec3::default();
-            for (mut bull, mut velocity) in &mut bulls {
+            for (mut bull, mut velocity, transform) in &mut bulls {
                 if bull.state == BullState::Running {
                     for mut shakeable in shakeables.iter_mut() {
                         shakeable.trauma = f32::min(shakeable.trauma + TRAUMA_AMOUNT, 1.0);
@@ -119,6 +125,17 @@ fn handle_collisions(
                     bull_velocity = velocity.linvel;
 
                     velocity.linvel = -velocity.linvel;
+
+                    dust_spawn_event_writer.send(dust::DustSpawnEvent {
+                        position: transform.translation + (transform.right() * 5.0),
+                        count: 10,
+                        spread: 6.0,
+                        rate: 0.5,
+                        dust_time_to_live: 3.0,
+                        emitter_time_to_live: 0.0,
+                        size: 2.0,
+                        ..default()
+                    });
                 }
             }
 
@@ -242,6 +259,7 @@ fn update_bulls(
     mut bull_move_event_reader: EventReader<BullMoveEvent>,
     players: Query<(&Transform, &player::Player), Without<Bull>>,
     mut reset_bull_event_writer: EventWriter<ResetBullEvent>,
+    mut dust_spawn_event_writer: EventWriter<dust::DustSpawnEvent>,
 ) {
     let mut move_events = HashMap::new();
     for move_event in bull_move_event_reader.iter() {
@@ -274,6 +292,16 @@ fn update_bulls(
                 transform.rotation = rotation;
             }
             bull.charging_cooldown -= time.delta_seconds();
+            bull.dust_cooldown -= time.delta_seconds();
+            bull.dust_cooldown = bull.dust_cooldown.clamp(0.0, 10.0);
+            if bull.dust_cooldown <= 0.0 {
+                dust_spawn_event_writer.send(dust::DustSpawnEvent {
+                    position: transform.translation,
+                    count: 1,
+                    ..default()
+                });
+                bull.dust_cooldown = CHARGE_DUST_RATE;
+            }
 
             if bull.charging_cooldown <= 0.0 {
                 bull.state = BullState::Running;
@@ -308,6 +336,17 @@ fn update_bulls(
 
                 if bull.charging_cooldown <= 0.0 {
                     bull.state = BullState::Idle;
+                }
+
+                bull.dust_cooldown -= time.delta_seconds();
+                bull.dust_cooldown = bull.dust_cooldown.clamp(0.0, 10.0);
+                if bull.dust_cooldown <= 0.0 {
+                    dust_spawn_event_writer.send(dust::DustSpawnEvent {
+                        position: transform.translation,
+                        count: 1,
+                        ..default()
+                    });
+                    bull.dust_cooldown = DUST_RATE;
                 }
             },
             BullState::Collision => {
