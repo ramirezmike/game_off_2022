@@ -1,4 +1,4 @@
-use crate::assets::GameAssets;
+use crate::{assets::GameAssets, player};
 use bevy::core_pipeline::clear_color::ClearColorConfig;
 use bevy::input::mouse::{MouseMotion, MouseWheel};
 use bevy::prelude::*;
@@ -7,10 +7,12 @@ use bevy::render::view::RenderLayers;
 use bevy::render::camera::Projection;
 use std::f32::consts::TAU;
 
-pub const INGAME_CAMERA_X: f32 = -35.0;
-pub const INGAME_CAMERA_Y: f32 = 20.0;
-pub const INGAME_CAMERA_ROTATION_AXIS: Vec3 = Vec3::new(-0.2211861, -0.9493068, -0.22336805);
-pub const INGAME_CAMERA_ROTATION_ANGLE: f32 = 1.6325973;
+//) Vec3(-0.7463726, -2.7414508, -0.2843299)
+
+pub const INGAME_CAMERA_X: f32 = -29.928919;
+pub const INGAME_CAMERA_Y: f32 = 6.384182;
+pub const INGAME_CAMERA_ROTATION_AXIS: Vec3 = Vec3::new(0.24503553, 0.93911797, 0.24086143);
+pub const INGAME_CAMERA_ROTATION_ANGLE: f32 = 4.6667724;
 
 #[derive(Component)]
 pub struct PanOrbitCamera {
@@ -95,7 +97,6 @@ pub fn pan_orbit_camera(
     }
 
     for (mut pan_orbit, mut transform, projection) in query.iter_mut() {
-        //        println!("C: {:?}", transform.rotation.to_axis_angle());
         if orbit_button_changed {
             // only check for upside down when orbiting started or ended this frame
             // if the camera is "upside" down, panning horizontally would be inverted, so invert the input to make it correct
@@ -179,6 +180,17 @@ fn get_primary_window_size(windows: &Res<Windows>) -> Vec2 {
     Vec2::new(window.width() as f32, window.height() as f32)
 }
 
+pub fn look_at_player(
+    players: Query<&Transform, (With<player::Player>, Without<Camera3d>)>,
+    mut cameras: Query<&mut Transform, (With<Camera3d>, Without<player::Player>)>,
+) {
+    for mut camera_transform in &mut cameras {
+        for player_transform in &players {
+            camera_transform.look_at(player_transform.translation, Vec3::Y);
+        }
+    }
+}
+
 pub fn spawn_camera<T: Component + Clone>(
     commands: &mut Commands,
     cleanup_marker: T,
@@ -191,9 +203,10 @@ pub fn spawn_camera<T: Component + Clone>(
     println!("Spawning camera");
     let id = 
     commands
-        .spawn_bundle(Camera3dBundle {
+        .spawn(Camera3dBundle {
             transform: {
-                let mut t = Transform::from_translation(translation).looking_at(Vec3::ZERO, Vec3::Y);
+                let mut t = Transform::from_translation(translation);
+                t.rotation = rotation;
 //                t.rotate_x(-1.602);
 //                t.rotate_y(-1.264);
 //                t.rotate_z(-1.603);
@@ -215,6 +228,7 @@ pub fn spawn_camera<T: Component + Clone>(
 //        .insert(cleanup_marker.clone())
         .insert(PanOrbitCamera {
             radius,
+            //focus: Vec3::new(-1.0900329, -2.5414279, -1.4901161),
             ..Default::default()
         })
         .id();

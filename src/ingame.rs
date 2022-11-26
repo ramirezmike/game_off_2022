@@ -34,6 +34,7 @@ impl Plugin for InGamePlugin {
 //                  .with_system(game_camera::light_follow_camera.after(player::move_player))
 //                    .with_system(pass_speed_to_shader.after(player::move_player))
                     .with_system(collision_report)
+                    .with_system(game_camera::look_at_player)
                     .with_system(game_camera::pan_orbit_camera),
             );
     }
@@ -97,6 +98,7 @@ pub fn load(
     assets_handler.add_standard_mesh(&mut game_assets.dust, Mesh::from(shape::Plane { size: 2.0 }));
 
     assets_handler.add_material(&mut game_assets.cloud_texture, "textures/cloud.png", true);
+    assets_handler.add_material(&mut game_assets.wrench_texture, "textures/wrench.png", true);
     assets_handler.add_material(&mut game_assets.star_full_texture, "textures/star_full.png", true);
     assets_handler.add_material(&mut game_assets.star_half_texture, "textures/star_half.png", true);
     assets_handler.add_material(&mut game_assets.star_empty_texture, "textures/star_empty.png", true);
@@ -146,6 +148,10 @@ pub fn setup(
                            cmds.insert(Collider::from_bevy_mesh(mesh, &ComputedColliderShape::TriMesh).unwrap())
                                .insert(BullCollide);
                        }
+                   }
+
+                   if name.contains("noshadowcast") {
+                       cmds.insert(bevy::pbr::NotShadowCaster);
                    }
                    if name.contains("invisible") {
                        cmds.insert(Visibility {
@@ -259,7 +265,7 @@ pub fn setup(
     const HALF_SIZE: f32 = 100.0;
     commands.spawn_bundle(DirectionalLightBundle {
         directional_light: DirectionalLight {
-            illuminance: 100000.0,
+            illuminance: 50000.0,
             color: Color::rgba(1.0, 1.0, 1.0, 1.0),
             shadow_projection: OrthographicProjection {
                 left: -HALF_SIZE,
@@ -275,7 +281,7 @@ pub fn setup(
         },
         transform: {
             let mut t = Transform::default();
-            t.rotate_x(5.00);
+            t.rotate_x(-1.6);
             t
         },        
         ..Default::default()

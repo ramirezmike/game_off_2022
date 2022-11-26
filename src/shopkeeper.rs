@@ -115,12 +115,25 @@ fn move_shopkeepers(
                 keeper.state = ShopKeeperState::Repairing(group_id, REPAIR_TIME);
                 dust_spawn_event_writer.send(dust::DustSpawnEvent {
                     position: keeper_transform.translation,
-                    count: 10,
+                    count: 3,
                     spread: 6.0,
                     rate: 0.5,
                     dust_time_to_live: 3.0,
                     emitter_time_to_live: REPAIR_TIME,
                     size: 2.0,
+                    image: game_assets.cloud_texture.image.clone(),
+                    ..default()
+                });
+                dust_spawn_event_writer.send(dust::DustSpawnEvent {
+                    position: keeper_transform.translation,
+                    count: 1,
+                    spread: 6.0,
+                    speed: 2.0,
+                    rate: 0.2,
+                    dust_time_to_live: 3.0,
+                    emitter_time_to_live: REPAIR_TIME,
+                    size: 1.5,
+                    image: game_assets.wrench_texture.image.clone(),
                     ..default()
                 });
             } else {
@@ -145,6 +158,7 @@ fn move_shopkeepers(
                     dust_spawn_event_writer.send(dust::DustSpawnEvent {
                         position: keeper_transform.translation,
                         count: 1,
+                        image: game_assets.cloud_texture.image.clone(),
                         ..default()
                     });
                     keeper.dust_cooldown = DUST_RATE;

@@ -71,11 +71,12 @@ impl Default for PlayerState {
 
 pub fn move_player(
     time: Res<Time>,
-    mut players: Query<(Entity, &mut Transform, &mut Player, &mut Velocity), Without<bull::Bull>>,
+    mut players: Query<(Entity, &mut Transform, &mut Player, &mut Velocity), (Without<bull::Bull>, Without<Camera3d>)>,
     bull: Query<(&Transform, &bull::Bull), Without<Player>>,
     mut player_move_event_reader: EventReader<PlayerMoveEvent>,
     mut animations: Query<&mut AnimationPlayer>,
     mut game_state: ResMut<game_state::GameState>,
+    cameras: Query<&Transform, (With<Camera3d>, Without<Player>)>,
     game_assets: ResMut<GameAssets>,
 ) {
     let mut move_events = HashMap::new();
@@ -129,6 +130,27 @@ pub fn move_player(
                 if let Some(move_event) = move_events.get(&entity) {
                     match move_event.movement {
                         Movement::Normal(direction) => {
+
+                            /*
+                            let camera_transform = cameras.single();
+                            let direction = Vec3::from(direction);
+                            let mut acceleration = Vec3::ZERO;
+                            if direction.z >= 0.5 {
+                                acceleration += camera_transform.right();
+                            }
+                            if direction.z <= -0.5 {
+                                acceleration += camera_transform.left();
+                            }
+                            if direction.x >= 0.5 {
+                                acceleration += camera_transform.forward();
+                            }
+                            if direction.x <= -0.5 {
+                                acceleration += camera_transform.back();
+                            }
+                            acceleration.y = 0.0; 
+
+                            println!("GOing: {}", acceleration);
+                            */
                             let acceleration = Vec3::from(direction);
                             velocity.linvel += (acceleration.zero_signum() * speed) * time.delta_seconds();
                         }

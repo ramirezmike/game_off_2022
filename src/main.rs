@@ -140,6 +140,7 @@ fn debug(
     mut shakeables: Query<&mut Shake3d>,
     mut rapier: ResMut<RapierConfiguration>,
     mut restore_group_event_writer: EventWriter<groups::RestoreGroupEvent>,
+    cameras: Query<(&Transform, &game_camera::PanOrbitCamera), With<Camera3d>>,
     plates: Query<(Entity, &Parent, &Velocity), With<props::Plate>>,
     parent_transforms: Query<&Transform>,
     assets_gltf: Res<Assets<Gltf>>,
@@ -215,6 +216,13 @@ fn debug(
         restore_group_event_writer.send(groups::RestoreGroupEvent {
             group_id: 1
         });
+    }
+
+    if keys.just_pressed(KeyCode::U) {
+        for (transform, pan) in &cameras {
+            println!("C: {:?} {:?} {:?}", transform.translation, transform.rotation.to_axis_angle(), pan.focus);
+            println!("Forward: {:?}", transform.forward());
+        }
     }
 
     if keys.just_pressed(KeyCode::C) {

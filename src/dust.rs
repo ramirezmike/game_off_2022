@@ -24,6 +24,8 @@ pub struct DustSpawnEvent {
     pub dust_time_to_live: f32,
     pub spread: f32,
     pub size: f32,
+    pub speed: f32,
+    pub image: Handle<Image>,
 }
 
 impl Default for DustSpawnEvent {
@@ -35,7 +37,9 @@ impl Default for DustSpawnEvent {
             emitter_time_to_live: 0.0,
             dust_time_to_live: 3.0,
             spread: 0.0,
+            speed: 1.0,
             size: 1.0,
+            image: Handle::<Image>::default(),
         }
     }
 }
@@ -49,7 +53,9 @@ struct DustEmitter {
     pub time_to_live: f32,
     pub dust_time_to_live: f32,
     pub spread: f32,
+    pub speed: f32,
     pub size: f32,
+    pub image: Handle<Image>,
 }
 
 #[derive(Component)]
@@ -70,11 +76,13 @@ fn handle_dust_spawn_event(
                 count: event.count,
                 current_rate: 0.0,
                 rate: event.rate,
+                speed: event.speed,
                 current_life_time: 0.0,
                 time_to_live: event.emitter_time_to_live,
                 dust_time_to_live: event.dust_time_to_live,
                 spread: event.spread,
                 size: event.size,
+                image: event.image.clone(),
             })
         );
     }
@@ -109,7 +117,7 @@ fn handle_dust(
 fn handle_emitters(
     mut commands: Commands,
     mut emitters: Query<(Entity, &Transform, &mut DustEmitter)>,
-    mut game_assets: ResMut<GameAssets>,
+    game_assets: Res<GameAssets>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     time: Res<Time>,
 ) {
@@ -121,7 +129,7 @@ fn handle_emitters(
 
         if emitter.current_rate <= 0.0 {
             let material = materials.add(StandardMaterial {
-                               base_color_texture: Some(game_assets.cloud_texture.image.clone()),
+                               base_color_texture: Some(emitter.image.clone()),
                                alpha_mode: AlphaMode::Blend,
                                ..Default::default()
                            });
@@ -152,7 +160,7 @@ fn handle_emitters(
                         })
                         .insert(bevy::pbr::NotShadowCaster)
                         .insert(Dust {
-                            speed: 1.0,
+                            speed: emitter.speed,
                             current_life_time: 0.0,
                             time_to_live: emitter.dust_time_to_live,
                         });

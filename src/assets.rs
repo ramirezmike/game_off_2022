@@ -33,6 +33,7 @@ pub struct GameAssets {
 
     pub bevy_icon: asset_loading::GameTexture,
     pub cloud_texture: asset_loading::GameTexture,
+    pub wrench_texture: asset_loading::GameTexture,
     pub star_full_texture: asset_loading::GameTexture,
     pub star_half_texture: asset_loading::GameTexture,
     pub star_empty_texture: asset_loading::GameTexture,

@@ -102,6 +102,7 @@ fn handle_collisions(
     mut bull_colliders: Query<(&mut ingame::BullCollide, Option<&mut ExternalForce>, Option<&mut ExternalImpulse>), Without<Bull>>,
     mut shakeables: Query<&mut Shake3d>,
     mut dust_spawn_event_writer: EventWriter<dust::DustSpawnEvent>,
+    game_assets: Res<GameAssets>,
 ) {
     for e in contact_force_events.iter() {
         println!("contact force event {:?}", e.total_force_magnitude);
@@ -134,6 +135,7 @@ fn handle_collisions(
                         dust_time_to_live: 3.0,
                         emitter_time_to_live: 0.0,
                         size: 2.0,
+                        image: game_assets.cloud_texture.image.clone(),
                         ..default()
                     });
                 } else {
@@ -262,6 +264,7 @@ fn update_bulls(
     players: Query<(&Transform, &player::Player), Without<Bull>>,
     mut reset_bull_event_writer: EventWriter<ResetBullEvent>,
     mut dust_spawn_event_writer: EventWriter<dust::DustSpawnEvent>,
+    game_assets: Res<GameAssets>,
 ) {
     let mut move_events = HashMap::new();
     for move_event in bull_move_event_reader.iter() {
@@ -300,6 +303,7 @@ fn update_bulls(
                 dust_spawn_event_writer.send(dust::DustSpawnEvent {
                     position: transform.translation,
                     count: 1,
+                    image: game_assets.cloud_texture.image.clone(),
                     ..default()
                 });
                 bull.dust_cooldown = CHARGE_DUST_RATE;
@@ -346,6 +350,7 @@ fn update_bulls(
                     dust_spawn_event_writer.send(dust::DustSpawnEvent {
                         position: transform.translation,
                         count: 1,
+                        image: game_assets.cloud_texture.image.clone(),
                         ..default()
                     });
                     bull.dust_cooldown = DUST_RATE;
