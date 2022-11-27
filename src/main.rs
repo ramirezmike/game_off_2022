@@ -12,16 +12,20 @@ use bevy_mod_outline::{
     AutoGenerateOutlineNormalsPlugin, OutlinePlugin, 
 };
 
+use bevy_flycam::{NoCameraPlayerPlugin, FlyCam};
 
 mod asset_loading;
 mod assets;
+mod audio;
 mod bull;
 mod billboard;
 mod direction;
 mod dust;
+mod cutscene;
 mod game_camera;
 mod game_controller;
 mod game_state;
+mod game_script;
 mod groups;
 mod ingame;
 mod ingame_ui;
@@ -30,6 +34,7 @@ mod player;
 mod shopkeeper;
 mod score;
 mod props;
+mod title_screen;
 mod ui;
 
 fn main() {
@@ -49,15 +54,19 @@ fn main() {
         .add_plugin(bull::BullPlugin)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default().with_physics_scale(10.0))
         .add_plugin(RapierDebugRenderPlugin::default())
+        .add_plugin(NoCameraPlayerPlugin)
         .add_plugin(OutlinePlugin)
         .add_plugin(AutoGenerateOutlineNormalsPlugin)
         .add_plugin(billboard::BillboardPlugin)
         .add_plugin(dust::DustPlugin)
+        .add_plugin(audio::GameAudioPlugin)
+        .add_plugin(cutscene::CutscenePlugin)
         .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(asset_loading::AssetLoadingPlugin)
         .add_plugin(assets::AssetsPlugin)
         .add_plugin(game_controller::GameControllerPlugin)
         .add_plugin(game_state::GameStatePlugin)
+        .add_plugin(game_script::GameScriptPlugin)
         .add_plugin(groups::GroupPlugin)
         .add_plugin(ingame::InGamePlugin)
         .add_plugin(ingame_ui::InGameUIPlugin)
@@ -65,6 +74,7 @@ fn main() {
         .add_plugin(props::PropsPlugin)
         .add_plugin(score::ScorePlugin)
         .add_plugin(shopkeeper::ShopKeeperPlugin)
+        .add_plugin(title_screen::TitlePlugin)
         .add_plugin(ui::text_size::TextSizePlugin)
 
         .add_system(debug)
@@ -84,6 +94,7 @@ pub enum AppState {
     Debug,
     TitleScreen,
     Options,
+    LoadWorld,
     InGame,
     Splash,
     ScoreDisplay,
@@ -106,7 +117,7 @@ fn bootstrap(
 ) {
     clear_color.0 = Color::hex("aaaaaa").unwrap();
 
-    assets_handler.load(AppState::InGame, &mut game_assets, &game_state);
+    assets_handler.load(AppState::LoadWorld, &mut game_assets, &game_state);
 }
 
 pub trait ZeroSignum {
@@ -140,11 +151,12 @@ fn debug(
     mut shakeables: Query<&mut Shake3d>,
     mut rapier: ResMut<RapierConfiguration>,
     mut restore_group_event_writer: EventWriter<groups::RestoreGroupEvent>,
-    cameras: Query<(&Transform, &game_camera::PanOrbitCamera), With<Camera3d>>,
+    cameras: Query<(Entity, &Transform, &game_camera::PanOrbitCamera), With<Camera3d>>,
     plates: Query<(Entity, &Parent, &Velocity), With<props::Plate>>,
     parent_transforms: Query<&Transform>,
     assets_gltf: Res<Assets<Gltf>>,
     mut dust_spawn_event_writer: EventWriter<dust::DustSpawnEvent>,
+    mut cutscene_state: ResMut<cutscene::CutsceneState>
 //   mut velocities: Query<(Entity, &mut Velocity), Without<bull::Bull>>,
 ) {
     if keys.just_pressed(KeyCode::Q) {
@@ -219,7 +231,7 @@ fn debug(
     }
 
     if keys.just_pressed(KeyCode::U) {
-        for (transform, pan) in &cameras {
+        for (_, transform, pan) in &cameras {
             println!("C: {:?} {:?} {:?}", transform.translation, transform.rotation.to_axis_angle(), pan.focus);
             println!("Forward: {:?}", transform.forward());
         }
@@ -236,6 +248,18 @@ fn debug(
             size: 2.0,
             ..default()
         });
+    }
+
+    if keys.just_pressed(KeyCode::V) {
+        // skip cutscene
+        cutscene_state.cutscene_index = 99999999999;
+        cutscene_state.waiting_on_input = false;
+    }
+
+    if keys.just_pressed(KeyCode::F) {
+        for (entity, _, _) in &cameras {
+            commands.entity(entity).insert(FlyCam);
+        }
     }
 }
 

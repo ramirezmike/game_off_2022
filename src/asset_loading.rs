@@ -34,7 +34,7 @@ impl Default for NextState {
 
 #[derive(Default, Resource)]
 pub struct AssetsLoading {
-    pub asset_handles: Vec<HandleUntyped>,
+    pub asset_handles: Vec<(HandleUntyped, String)>,
 }
 
 #[derive(SystemParam)]
@@ -56,7 +56,7 @@ impl<'w, 's> AssetsHandler<'w, 's> {
         *asset = self.asset_server.load(path);
         self.assets_loading
             .asset_handles
-            .push(asset.clone_untyped());
+            .push((asset.clone_untyped(), path.to_string()));
     }
 
     pub fn load(
@@ -122,7 +122,7 @@ impl<'w, 's> AssetsHandler<'w, 's> {
         game_state: &ResMut<game_state::GameState>,
     ) {
         match state {
-            AppState::InGame => ingame::load(self, game_assets, game_state),
+            AppState::LoadWorld => ingame::load(self, game_assets, game_state),
             _ => (),
         }
     }
@@ -132,12 +132,17 @@ fn check_assets_ready(mut assets_handler: AssetsHandler) {
     use bevy::asset::LoadState;
 
     let mut ready = true;
-    for handle in assets_handler.assets_loading.asset_handles.iter() {
+    for (handle, path) in assets_handler.assets_loading.asset_handles.iter() {
         match assets_handler.asset_server.get_load_state(handle) {
             LoadState::Failed => {
-                println!("An asset had an error: {:?}", handle);
+                panic!("An asset had an error: {:?}", handle);
             }
             LoadState::Loaded => {}
+            LoadState::Unloaded => {
+                println!("unloaded!!");
+                assets_handler.asset_server.reload_asset(path);
+                ready = false;
+            }
             _ => {
                 ready = false;
             }
@@ -145,10 +150,13 @@ fn check_assets_ready(mut assets_handler: AssetsHandler) {
     }
 
     if ready {
+        println!("ready!");
         assets_handler.assets_loading.asset_handles = vec![]; // clear list since we've loaded everything
         assets_handler
             .state
             .set(assets_handler.next_state.state)
             .unwrap(); // move to next state
+    } else {
+        println!("not ready");
     }
 }

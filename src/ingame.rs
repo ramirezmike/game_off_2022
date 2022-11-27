@@ -1,6 +1,6 @@
 use crate::{
     asset_loading, assets::GameAssets, cleanup, game_state, AppState, game_camera, player, bull, 
-    DampPhysics, props::*, groups, shopkeeper, billboard,
+    DampPhysics, props::*, groups, shopkeeper, billboard, game_script, cutscene,
 };
 use bevy::prelude::*;
 use bevy::gltf::Gltf;
@@ -18,10 +18,12 @@ use bevy_mod_outline::{
 OutlineBundle, OutlineVolume,
 };
 
+pub const RENDER_TEXTURE_SIZE: u32 = 512;
 pub struct InGamePlugin;
 impl Plugin for InGamePlugin {
     fn build(&self, app: &mut App) {
-        app.add_system_set(SystemSet::on_enter(AppState::InGame).with_system(setup))
+        app.add_system_set(SystemSet::on_enter(AppState::Cutscene).with_system(setup))
+           .add_system_set(SystemSet::on_enter(AppState::InGame).with_system(setup))
             .add_system_set(
                 SystemSet::on_exit(AppState::InGame).with_system(cleanup::<CleanupMarker>),
             )
@@ -68,8 +70,10 @@ fn reset_ingame(
     mut assets_handler: asset_loading::AssetsHandler,
     mut game_assets: ResMut<GameAssets>,
     mut game_state: ResMut<game_state::GameState>,
+    mut game_script_state: ResMut<game_script::GameScriptState>,
 ) {
-    assets_handler.load(AppState::InGame, &mut game_assets, &mut game_state);
+    game_script_state.current = game_script::GameScript::LevelOneIntroCutscene;
+    assets_handler.load(AppState::LoadWorld, &mut game_assets, &mut game_state);
 }
 
 pub fn load(
@@ -90,6 +94,7 @@ pub fn load(
     assets_handler.add_animation(&mut game_assets.bull_run,"models/bull.glb#Animation3");
     assets_handler.add_animation(&mut game_assets.bull_walk,"models/bull.glb#Animation4");
     assets_handler.add_glb(&mut game_assets.plate, "models/plate.glb");
+    assets_handler.add_glb(&mut game_assets.intro_level, "models/intro.glb");
     assets_handler.add_glb(&mut game_assets.level_one, "models/level_one.glb");
     assets_handler.add_glb(&mut game_assets.broken_plate, "models/broken_plate.glb");
     assets_handler.add_glb(&mut game_assets.broken_mug, "models/broken_mug.glb");
@@ -102,6 +107,12 @@ pub fn load(
     assets_handler.add_material(&mut game_assets.star_full_texture, "textures/star_full.png", true);
     assets_handler.add_material(&mut game_assets.star_half_texture, "textures/star_half.png", true);
     assets_handler.add_material(&mut game_assets.star_empty_texture, "textures/star_empty.png", true);
+
+    assets_handler.add_material(&mut game_assets.mat_idle, "textures/matador_idle.png", true);
+    assets_handler.add_material(&mut game_assets.mat_talk, "textures/matador_mouth.png", true);
+    assets_handler.add_material(&mut game_assets.pa_no_mouth, "textures/pa_nomouth.png", true);
+    assets_handler.add_material(&mut game_assets.pa_mouth, "textures/pa_mouth.png", true);
+    assets_handler.add_material(&mut game_assets.pa_lookleft, "textures/pa_lookleft.png", true);
 }
 
 #[derive(Component)]
@@ -116,25 +127,22 @@ pub fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut camera: Query<&mut Transform, With<game_camera::PanOrbitCamera>>,
     mut rapier: ResMut<RapierConfiguration>,
+    game_script_state: Res<game_script::GameScriptState>,
 ) {
-    println!("Setting up ingame!");
+    println!("Called SETUP");
     game_state.title_screen_cooldown = 1.0;
-//  rapier.gravity = Vec3::new(0.0, -9.81, 0.0);
-//  rapier.physics_pipeline_active = false;
-//  rapier.query_pipeline_active = false;
-//  rapier.timestep_mode =  TimestepMode::Variable {
-//      time_scale: 0.0,
-//      max_dt: 1.0,
-//      substeps: 0,
-//  };
 
-//  if let Some(gltf) = assets_gltf.get(&game_assets.matador.clone()) {
-//      .insert(CleanupMarker);
-//  }
+    let gltf = 
+        match game_script_state.current {
+            game_script::GameScript::IntroCutscene => assets_gltf.get(&game_assets.intro_level.clone()),
+            game_script::GameScript::LevelOneIntroCutscene => assets_gltf.get(&game_assets.level_one.clone()),
+            game_script::GameScript::LevelOne => assets_gltf.get(&game_assets.level_one.clone()),
+            _ => None  
+        };
 
-    if let Some(gltf) = assets_gltf.get(&game_assets.level_one.clone()) {
-        commands.spawn_bundle(HookedSceneBundle {
-
+    if let Some(gltf) = gltf {
+        println!("got gltf");
+        commands.spawn(HookedSceneBundle {
            scene: SceneBundle { scene: gltf.scenes[0].clone(), ..default() },
            hook: SceneHook::new(move |entity, cmds, mesh| {
                if let Some(name) = entity.get::<Name>().map(|t|t.as_str()) {
@@ -243,6 +251,12 @@ pub fn setup(
                           to where it was
                       */
                    }
+                   if name.contains("AnimationPaMarker") {
+                       cmds.insert(cutscene::PaTalkMarker);
+                   }
+                   if name.contains("AnimationMatMarker") {
+                       cmds.insert(cutscene::MatTalkMarker);
+                   }
                    if name.contains("mug") {
                        Mug::add_components(cmds);
                    }
@@ -254,89 +268,97 @@ pub fn setup(
                }
            }),
         });
-    }
 
-    // lights
-    commands.insert_resource(AmbientLight {
-        color: Color::WHITE,
-        brightness: 0.50,
-    });
+        // lights
+        commands.insert_resource(AmbientLight {
+            color: Color::WHITE,
+            brightness: 0.50,
+        });
 
-    const HALF_SIZE: f32 = 100.0;
-    commands.spawn_bundle(DirectionalLightBundle {
-        directional_light: DirectionalLight {
-            illuminance: 50000.0,
-            color: Color::rgba(1.0, 1.0, 1.0, 1.0),
-            shadow_projection: OrthographicProjection {
-                left: -HALF_SIZE,
-                right: HALF_SIZE,
-                bottom: -HALF_SIZE,
-                top: HALF_SIZE,
-                near: -10.0 * HALF_SIZE,
-                far: 10.0 * HALF_SIZE,
+        const HALF_SIZE: f32 = 100.0;
+        commands.spawn_bundle(DirectionalLightBundle {
+            directional_light: DirectionalLight {
+                illuminance: 50000.0,
+                color: Color::rgba(1.0, 1.0, 1.0, 1.0),
+                shadow_projection: OrthographicProjection {
+                    left: -HALF_SIZE,
+                    right: HALF_SIZE,
+                    bottom: -HALF_SIZE,
+                    top: HALF_SIZE,
+                    near: -10.0 * HALF_SIZE,
+                    far: 10.0 * HALF_SIZE,
+                    ..Default::default()
+                },
+                shadows_enabled: game_state.shadows_on,
                 ..Default::default()
             },
-            shadows_enabled: game_state.shadows_on,
+            transform: {
+                let mut t = Transform::default();
+                t.rotate_x(-1.6);
+                t
+            },        
             ..Default::default()
-        },
-        transform: {
-            let mut t = Transform::default();
-            t.rotate_x(-1.6);
-            t
-        },        
-        ..Default::default()
-    })
-    .insert(CleanupMarker);
+        })
+        .insert(CleanupMarker);
 
-    if camera.iter().len() == 0 {
-        let shake_id = commands
-            .spawn((Shake3d {
-                max_offset: Vec3::new(0.0, 0.0, 0.0),
-                max_yaw_pitch_roll: Vec3::new(0.1, 0.1, 0.1),
-                trauma: 0.0,
-                trauma_power: 2.0,
-                decay: 0.8,
-                random_sources: [
-                    Box::new(MyRandom),
-                    Box::new(MyRandom),
-                    Box::new(MyRandom),
-                    Box::new(MyRandom),
-                    Box::new(MyRandom),
-                    Box::new(MyRandom),
-                ],
-            },
-            SpatialBundle::default()))
-            .id();
+        if camera.iter().len() == 0 {
+            let shake_id = commands
+                .spawn((Shake3d {
+                    max_offset: Vec3::new(0.0, 0.0, 0.0),
+                    max_yaw_pitch_roll: Vec3::new(0.1, 0.1, 0.1),
+                    trauma: 0.0,
+                    trauma_power: 2.0,
+                    decay: 0.8,
+                    random_sources: [
+                        Box::new(MyRandom),
+                        Box::new(MyRandom),
+                        Box::new(MyRandom),
+                        Box::new(MyRandom),
+                        Box::new(MyRandom),
+                        Box::new(MyRandom),
+                    ],
+                },
+                SpatialBundle::default()))
+                .id();
 
-        let camera_id =
-            game_camera::spawn_camera(
-                &mut commands,
-                CleanupMarker,
-                &game_assets,
-                Vec3::new(
-                    game_camera::INGAME_CAMERA_X,
-                    game_camera::INGAME_CAMERA_Y,
-                    0.0,
-                ),
-                Quat::from_axis_angle(
-                    game_camera::INGAME_CAMERA_ROTATION_AXIS,
-                    game_camera::INGAME_CAMERA_ROTATION_ANGLE,
-                ),
-            );
+            let camera_id =
+                game_camera::spawn_camera(
+                    &mut commands,
+                    CleanupMarker,
+                    &game_assets,
+                    Vec3::new(
+                        game_camera::INGAME_CAMERA_X,
+                        game_camera::INGAME_CAMERA_Y,
+                        0.0,
+                    ),
+                    Quat::from_axis_angle(
+                        game_camera::INGAME_CAMERA_ROTATION_AXIS,
+                        game_camera::INGAME_CAMERA_ROTATION_ANGLE,
+                    ),
+                );
 
-        commands.entity(shake_id).push_children(&[camera_id]);
-    } else {
-        // Commented this so that when I refresh the camera stays in the same place
-//      for mut camera in &mut camera {
-//          camera.translation = Vec3::new(
-//              game_camera::INGAME_CAMERA_X,
-//              game_camera::INGAME_CAMERA_Y,
-//              0.0,
-//          );
-//          camera.rotation = Quat::from_axis_angle(
-//              game_camera::INGAME_CAMERA_ROTATION_AXIS,
-//              game_camera::INGAME_CAMERA_ROTATION_ANGLE,
-//          );
-//      }
+            commands.entity(shake_id).push_children(&[camera_id]);
+        } else {
+            // Commented this so that when I refresh the camera stays in the same place
+    //      for mut camera in &mut camera {
+    //          camera.translation = Vec3::new(
+    //              game_camera::INGAME_CAMERA_X,
+    //              game_camera::INGAME_CAMERA_Y,
+    //              0.0,
+    //          );
+    //          camera.rotation = Quat::from_axis_angle(
+    //              game_camera::INGAME_CAMERA_ROTATION_AXIS,
+    //              game_camera::INGAME_CAMERA_ROTATION_ANGLE,
+    //          );
+    //      }
+        }
     }
+//  rapier.gravity = Vec3::new(0.0, -9.81, 0.0);
+//  rapier.physics_pipeline_active = false;
+//  rapier.query_pipeline_active = false;
+//  rapier.timestep_mode =  TimestepMode::Variable {
+//      time_scale: 0.0,
+//      max_dt: 1.0,
+//      substeps: 0,
+//  };
 }

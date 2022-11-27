@@ -29,7 +29,6 @@ fn set_groups(
     markers: Query<(Entity, &Transform, &GlobalTransform, &GroupMarker)>,
 ) {
     for (entity, transform, global_transform, marker) in &markers {
-        println!("found marker!!!!");
         commands.entity(entity)
                 .remove::<GroupMarker>()
                 .insert(GroupMember {

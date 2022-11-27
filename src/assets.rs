@@ -28,6 +28,7 @@ pub struct GameAssets {
     pub broken_plate: Handle<Gltf>,
     pub broken_mug: Handle<Gltf>,
     pub level_one: Handle<Gltf>,
+    pub intro_level: Handle<Gltf>,
 
     pub blip: Handle<AudioSource>,
 
@@ -37,5 +38,13 @@ pub struct GameAssets {
     pub star_full_texture: asset_loading::GameTexture,
     pub star_half_texture: asset_loading::GameTexture,
     pub star_empty_texture: asset_loading::GameTexture,
+    pub title_screen_logo: asset_loading::GameTexture,
+
+    pub mat_idle: asset_loading::GameTexture,
+    pub mat_talk: asset_loading::GameTexture,
+    pub pa_no_mouth: asset_loading::GameTexture,
+    pub pa_mouth: asset_loading::GameTexture,
+    pub pa_lookleft: asset_loading::GameTexture,
+
     pub dust: Handle<Mesh>,
 }
