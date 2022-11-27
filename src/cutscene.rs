@@ -34,7 +34,7 @@ impl Plugin for CutscenePlugin {
 }
 
 #[derive(Component)]
-struct CutsceneCleanupMarker;
+pub struct CutsceneCleanupMarker;
 
 #[derive(Default, Resource)]
 pub struct CutsceneState {

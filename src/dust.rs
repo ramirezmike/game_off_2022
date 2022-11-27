@@ -3,6 +3,7 @@ use crate::{
     assets::GameAssets,
     billboard,
     ingame,
+    cutscene,
 };
 use rand::Rng;
 
@@ -166,6 +167,7 @@ fn handle_emitters(
                         });
                     })
                 .insert(billboard::Billboard)
+                .insert(cutscene::CutsceneCleanupMarker)
                 .insert(ingame::CleanupMarker);
             }
 

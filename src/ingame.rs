@@ -1,8 +1,9 @@
 use crate::{
     asset_loading, assets::GameAssets, cleanup, game_state, AppState, game_camera, player, bull, 
-    DampPhysics, props::*, groups, shopkeeper, billboard, game_script, cutscene,
+    DampPhysics, props::*, groups, shopkeeper, billboard, game_script, cutscene, dust,
 };
 use bevy::prelude::*;
+use bevy::ecs::system::EntityCommands;
 use bevy::gltf::Gltf;
 use bevy::render::view::NoFrustumCulling;
 use leafwing_input_manager::prelude::*;
@@ -28,6 +29,7 @@ impl Plugin for InGamePlugin {
                 SystemSet::on_exit(AppState::InGame).with_system(cleanup::<CleanupMarker>),
             )
             .add_system_set(SystemSet::on_update(AppState::ResetInGame).with_system(reset_ingame))
+            .add_system(animate_fire)
             .add_plugin(HookPlugin)
             .add_plugin(CameraShakePlugin)
             .add_system_set(
@@ -104,6 +106,7 @@ pub fn load(
 
     assets_handler.add_material(&mut game_assets.cloud_texture, "textures/cloud.png", true);
     assets_handler.add_material(&mut game_assets.wrench_texture, "textures/wrench.png", true);
+    assets_handler.add_material(&mut game_assets.fire_texture, "textures/fire.png", true);
     assets_handler.add_material(&mut game_assets.star_full_texture, "textures/star_full.png", true);
     assets_handler.add_material(&mut game_assets.star_half_texture, "textures/star_half.png", true);
     assets_handler.add_material(&mut game_assets.star_empty_texture, "textures/star_empty.png", true);
@@ -132,6 +135,7 @@ pub fn setup(
     println!("Called SETUP");
     game_state.title_screen_cooldown = 1.0;
 
+
     let gltf = 
         match game_script_state.current {
             game_script::GameScript::IntroCutscene => assets_gltf.get(&game_assets.intro_level.clone()),
@@ -158,13 +162,33 @@ pub fn setup(
                        }
                    }
 
+                   if name.contains("PointLight") {
+                       handle_lights(cmds, name);
+                   }
+
                    if name.contains("noshadowcast") {
                        cmds.insert(bevy::pbr::NotShadowCaster);
                    }
                    if name.contains("invisible") {
-                       cmds.insert(Visibility {
-                           is_visible: false
-                       });
+//                     cmds.insert(Visibility {
+//                         is_visible: false
+//                     });
+                   }
+
+                   if name.contains("light") {
+                      println!("Inserting light!");
+                      cmds.with_children(|children| {
+                        children 
+                            .spawn(PointLightBundle {
+                                point_light: PointLight {
+                                  intensity: 90.0, // lumens - roughly a 100W non-halogen incandescent bulb
+                                  color: Color::rgba(255.0, 255.0, 255.0, 255.0),
+                                  shadows_enabled: true,
+                                    ..default()
+                                },
+                                ..default()
+                            });
+                      });
                    }
                    if name.contains("bull") {
                        let BULL_COLLISION_THRESHOLD: f32 = 0.40001;
@@ -270,36 +294,36 @@ pub fn setup(
         });
 
         // lights
-        commands.insert_resource(AmbientLight {
-            color: Color::WHITE,
-            brightness: 0.50,
-        });
+//      commands.insert_resource(AmbientLight {
+//          color: Color::WHITE,
+//          brightness: 0.10,
+//      });
 
         const HALF_SIZE: f32 = 100.0;
-        commands.spawn_bundle(DirectionalLightBundle {
-            directional_light: DirectionalLight {
-                illuminance: 50000.0,
-                color: Color::rgba(1.0, 1.0, 1.0, 1.0),
-                shadow_projection: OrthographicProjection {
-                    left: -HALF_SIZE,
-                    right: HALF_SIZE,
-                    bottom: -HALF_SIZE,
-                    top: HALF_SIZE,
-                    near: -10.0 * HALF_SIZE,
-                    far: 10.0 * HALF_SIZE,
-                    ..Default::default()
-                },
-                shadows_enabled: game_state.shadows_on,
-                ..Default::default()
-            },
-            transform: {
-                let mut t = Transform::default();
-                t.rotate_x(-1.6);
-                t
-            },        
-            ..Default::default()
-        })
-        .insert(CleanupMarker);
+//      commands.spawn_bundle(DirectionalLightBundle {
+//          directional_light: DirectionalLight {
+//              illuminance: 50000.0,
+//              color: Color::rgba(1.0, 1.0, 1.0, 1.0),
+//              shadow_projection: OrthographicProjection {
+//                  left: -HALF_SIZE,
+//                  right: HALF_SIZE,
+//                  bottom: -HALF_SIZE,
+//                  top: HALF_SIZE,
+//                  near: -10.0 * HALF_SIZE,
+//                  far: 10.0 * HALF_SIZE,
+//                  ..Default::default()
+//              },
+//              shadows_enabled: game_state.shadows_on,
+//              ..Default::default()
+//          },
+//          transform: {
+//              let mut t = Transform::default();
+//              t.rotate_x(-1.6);
+//              t
+//          },        
+//          ..Default::default()
+//      })
+//      .insert(CleanupMarker);
 
         if camera.iter().len() == 0 {
             let shake_id = commands
@@ -361,4 +385,101 @@ pub fn setup(
 //      max_dt: 1.0,
 //      substeps: 0,
 //  };
+}
+
+fn handle_lights(
+    entity_commands: &mut EntityCommands,
+    name: &str,
+) {
+    if name.contains("Fire") {
+        entity_commands
+            .insert(PointLight {
+                color: Color::rgb(0.78, 0.474, 0.0),
+                intensity: 90.0,
+                shadows_enabled: true,
+                ..default()
+            })
+            .insert(FireLight {
+                light_going_up: true,
+                original_translation: None,
+                new_target: None,
+                fire_jump_time: 0.0,
+            });
+    }
+//    color:  1.0, .279, 0
+//    intensity: 58
+// range 20.9
+// shadows_enabled
+// shadow_depth_bias
+// shadow_normal_bias
+}
+
+#[derive(Component)]
+struct FireLight {
+    light_going_up: bool,
+    original_translation: Option::<Vec3>,
+    new_target: Option::<Vec3>,
+    fire_jump_time: f32,
+}
+
+fn animate_fire(
+    mut fires: Query<(&mut Transform, &GlobalTransform, &mut PointLight, &mut FireLight)>,
+    mut dust_spawn_event_writer: EventWriter<dust::DustSpawnEvent>,
+    game_assets: ResMut<GameAssets>,
+    time: Res<Time>,
+) {
+    for (mut transform, &global, mut point_light, mut fire) in &mut fires {
+        if fire.original_translation.is_none() {
+            fire.original_translation = Some(transform.translation);
+
+            dust_spawn_event_writer.send(dust::DustSpawnEvent {
+                position: global.compute_transform().translation,
+                count: 2,
+                spread: 0.5,
+                speed: 0.2,
+                rate: 0.5,
+                dust_time_to_live: 1.5,
+                emitter_time_to_live: 99999.0,
+                size: 0.6,
+                image: game_assets.fire_texture.image.clone(),
+                ..default()
+            });
+
+            dust_spawn_event_writer.send(dust::DustSpawnEvent {
+                position: global.compute_transform().translation,
+                count: 1,
+                spread: 0.5,
+                speed: 2.0,
+                rate: 0.7,
+                dust_time_to_live: 3.0,
+                emitter_time_to_live: 99999.0,
+                size: 0.5,
+                image: game_assets.cloud_texture.image.clone(),
+                ..default()
+            });
+        }
+
+        let light_speed = 40.0;
+        if fire.light_going_up {
+            point_light.intensity += time.delta_seconds() * light_speed;
+            if point_light.intensity > 150.0 {
+                fire.light_going_up = false;
+            }
+        } else {
+            point_light.intensity -= time.delta_seconds() * light_speed;
+            if point_light.intensity < 90.0 {
+                fire.light_going_up = true;
+            }
+        }
+
+        fire.fire_jump_time -= time.delta_seconds();
+        
+        if fire.fire_jump_time < 0.0 {
+            let x = fire.original_translation.expect("just set this x").x + random_number() * time.delta_seconds() * 2.0;
+            let z = fire.original_translation.expect("just set this z").z + random_number() * time.delta_seconds() * 2.0;
+            transform.translation.x = x;
+            transform.translation.z = z;
+            fire.fire_jump_time = 0.2;
+        }
+    }
 }
