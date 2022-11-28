@@ -144,7 +144,7 @@ const TRAUMA_AMOUNT: f32 = 0.5;
 fn debug(
     mut commands: Commands,
     keys: Res<Input<KeyCode>>,
-    game_state: ResMut<game_state::GameState>,
+    mut game_state: ResMut<game_state::GameState>,
     mut exit: ResMut<Events<AppExit>>,
     mut assets_handler: asset_loading::AssetsHandler,
     mut game_assets: ResMut<assets::GameAssets>,
@@ -254,6 +254,7 @@ fn debug(
         // skip cutscene
         cutscene_state.cutscene_index = 99999999999;
         cutscene_state.waiting_on_input = false;
+        game_state.current_time = 0.0;
     }
 
     if keys.just_pressed(KeyCode::F) {
@@ -298,4 +299,3 @@ fn initial_damp_physics(
         }
     }
 }
-

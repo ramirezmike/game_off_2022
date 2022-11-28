@@ -385,6 +385,7 @@ fn play_cutscene(
     mut audio: GameAudio,
 ) {
     let mut camera = camera.single_mut();
+    println!("play Cutscene");
 //    println!("{:?} {:?}", camera.translation, camera.rotation.to_axis_angle());
     if cutscene_state.waiting_on_input { return; }
 
@@ -392,11 +393,13 @@ fn play_cutscene(
     cutscene_state.waiting_on_input = true;
     let text_speed = 0.10;
 
+    println!("Cutscene: matching {:?}", game_script_state.current);
 //    *ingame_ui_textbox = ingame_ui::TextBox::default(); // clear out any banter or commentary
     match game_script_state.current {
         game_script::GameScript::IntroCutscene => {
             match cutscene_state.cutscene_index {
                 0 => {
+                    println!("Cutscene: 0 in intro");
                     camera.translation = Vec3::new(18.590773, 1.6162292, 19.574091);
                     camera.rotation = Quat::from_axis_angle(Vec3::new(-0.030079607, -0.99812686, -0.05320679), 2.071217);
                     audio.stop_bgm();
@@ -413,6 +416,7 @@ fn play_cutscene(
                     });
                 },
                 _ => {
+                    println!("Cutscene: Done in intro");
                     camera.translation = Vec3::new(game_camera::INGAME_CAMERA_X, 
                                                    game_camera::INGAME_CAMERA_Y, 
                                                    0.0);
@@ -451,6 +455,8 @@ fn play_cutscene(
                 }
             }
         },
-        _ => ()
+        _ => {
+            println!("uhh not a cutscene???");
+        }
     }
 }

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use crate::{
-    AppState, groups, game_state,
+    AppState, groups, game_state, asset_loading, game_script, assets, cutscene,
 };
 use std::collections::HashMap;
 
@@ -17,9 +17,19 @@ impl Plugin for ScorePlugin {
 
 fn track_round_time(
     mut game_state: ResMut<game_state::GameState>,
+    mut cutscene_state: ResMut<cutscene::CutsceneState>,
     time: Res<Time>,
+    mut game_script_state: ResMut<game_script::GameScriptState>,
+    mut assets_handler: asset_loading::AssetsHandler,
+    mut game_assets: ResMut<assets::GameAssets>,
 ) {
     game_state.current_time -= time.delta_seconds();
+    
+    if game_state.current_time < 0.0 {
+        cutscene_state.cutscene_index = 0;
+        game_script_state.next();
+        assets_handler.load(AppState::Cutscene, &mut game_assets, &game_state);
+    }
 }
 
 fn check_score(

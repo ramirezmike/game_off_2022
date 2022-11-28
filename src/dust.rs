@@ -84,7 +84,10 @@ fn handle_dust_spawn_event(
                 spread: event.spread,
                 size: event.size,
                 image: event.image.clone(),
-            })
+            },
+            cutscene::CutsceneCleanupMarker,
+            ingame::CleanupMarker
+            )
         );
     }
 }

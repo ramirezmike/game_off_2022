@@ -33,12 +33,14 @@ impl Default for GameScriptState {
 
 impl GameScriptState {
     pub fn next(&mut self) {
+        println!("Moving from {:?}", self.current);
         self.current = match self.current {
             GameScript::IntroCutscene => GameScript::LevelOneIntroCutscene,
             GameScript::LevelOneIntroCutscene => GameScript::LevelOne,
             GameScript::LevelOne => GameScript::IntroCutscene,
             _ => GameScript::IntroCutscene
         };
+        println!("to {:?}", self.current);
     }
 }
 

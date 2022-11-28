@@ -134,7 +134,7 @@ pub fn setup(
 ) {
     println!("Called SETUP");
     game_state.title_screen_cooldown = 1.0;
-
+    game_state.current_time = 60.0;
 
     let gltf = 
         match game_script_state.current {
@@ -150,7 +150,7 @@ pub fn setup(
            scene: SceneBundle { scene: gltf.scenes[0].clone(), ..default() },
            hook: SceneHook::new(move |entity, cmds, mesh| {
                if let Some(name) = entity.get::<Name>().map(|t|t.as_str()) {
-                   println!("Name: {} Mesh: {:?}", name, mesh.is_some());
+//                   println!("Name: {} Mesh: {:?}", name, mesh.is_some());
 
                    shopkeeper::spawn(name, cmds);
 
@@ -267,7 +267,6 @@ pub fn setup(
                        let group_id = usize::from_str(group_id)
                                            .expect("Group ID not a number");
 
-                       println!("INSERT MARKER {} {}", name, group_id);
                        cmds.insert(groups::GroupMarker(group_id));
                        /* 
                           need to break items that have groups
@@ -293,37 +292,48 @@ pub fn setup(
            }),
         });
 
-        // lights
-//      commands.insert_resource(AmbientLight {
-//          color: Color::WHITE,
-//          brightness: 0.10,
-//      });
+        match game_script_state.current {
+            game_script::GameScript::IntroCutscene => {
+                commands.insert_resource(AmbientLight {
+                    color: Color::WHITE,
+                    brightness: 0.00,
+                });
+            },
+            _ => {
+                // lights
+                commands.insert_resource(AmbientLight {
+                    color: Color::WHITE,
+                    brightness: 0.50,
+                });
 
-        const HALF_SIZE: f32 = 100.0;
-//      commands.spawn_bundle(DirectionalLightBundle {
-//          directional_light: DirectionalLight {
-//              illuminance: 50000.0,
-//              color: Color::rgba(1.0, 1.0, 1.0, 1.0),
-//              shadow_projection: OrthographicProjection {
-//                  left: -HALF_SIZE,
-//                  right: HALF_SIZE,
-//                  bottom: -HALF_SIZE,
-//                  top: HALF_SIZE,
-//                  near: -10.0 * HALF_SIZE,
-//                  far: 10.0 * HALF_SIZE,
-//                  ..Default::default()
-//              },
-//              shadows_enabled: game_state.shadows_on,
-//              ..Default::default()
-//          },
-//          transform: {
-//              let mut t = Transform::default();
-//              t.rotate_x(-1.6);
-//              t
-//          },        
-//          ..Default::default()
-//      })
-//      .insert(CleanupMarker);
+                const HALF_SIZE: f32 = 100.0;
+                commands.spawn(DirectionalLightBundle {
+                    directional_light: DirectionalLight {
+                        illuminance: 50000.0,
+                        color: Color::rgba(1.0, 1.0, 1.0, 1.0),
+                        shadow_projection: OrthographicProjection {
+                            left: -HALF_SIZE,
+                            right: HALF_SIZE,
+                            bottom: -HALF_SIZE,
+                            top: HALF_SIZE,
+                            near: -10.0 * HALF_SIZE,
+                            far: 10.0 * HALF_SIZE,
+                            ..Default::default()
+                        },
+                        shadows_enabled: game_state.shadows_on,
+                        ..Default::default()
+                    },
+                    transform: {
+                        let mut t = Transform::default();
+                        t.rotate_x(-1.6);
+                        t
+                    },        
+                    ..Default::default()
+                })
+                .insert(cutscene::CutsceneCleanupMarker)
+                .insert(CleanupMarker);
+            }
+        }
 
         if camera.iter().len() == 0 {
             let shake_id = commands
