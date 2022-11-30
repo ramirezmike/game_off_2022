@@ -101,7 +101,7 @@ fn handle_dust(
     for (entity, mut transform, mut dust, material_handle) in &mut dusts {
         dust.current_life_time += time.delta_seconds();
         if dust.current_life_time > dust.time_to_live {
-            commands.entity(entity).despawn_recursive();
+            commands.get_or_spawn(entity).despawn_recursive();
             continue;
         }
 
@@ -179,7 +179,7 @@ fn handle_emitters(
 
         emitter.current_life_time += time.delta_seconds();
         if emitter.current_life_time >= emitter.time_to_live {
-            commands.entity(entity).despawn_recursive();
+            commands.get_or_spawn(entity).despawn_recursive();
         }
     }
 }

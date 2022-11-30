@@ -27,7 +27,12 @@ pub struct GameAssets {
     pub plate: Handle<Gltf>,
     pub broken_plate: Handle<Gltf>,
     pub broken_mug: Handle<Gltf>,
+    pub broken_fishbowl: Handle<Gltf>,
     pub level_one: Handle<Gltf>,
+    pub level_two: Handle<Gltf>,
+    pub level_three: Handle<Gltf>,
+    pub level_four: Handle<Gltf>,
+    pub level_five: Handle<Gltf>,
     pub intro_level: Handle<Gltf>,
 
     pub blip: Handle<AudioSource>,

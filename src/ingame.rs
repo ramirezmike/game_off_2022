@@ -39,6 +39,7 @@ impl Plugin for InGamePlugin {
 //                    .with_system(pass_speed_to_shader.after(player::move_player))
                     .with_system(collision_report)
                     .with_system(game_camera::look_at_player)
+                    .with_system(rotate_rotate_entities)
                     .with_system(game_camera::pan_orbit_camera),
             );
     }
@@ -74,7 +75,7 @@ fn reset_ingame(
     mut game_state: ResMut<game_state::GameState>,
     mut game_script_state: ResMut<game_script::GameScriptState>,
 ) {
-    game_script_state.current = game_script::GameScript::LevelOneIntroCutscene;
+    game_script_state.current = game_script::GameScript::LevelThreeIntroCutscene;
     assets_handler.load(AppState::LoadWorld, &mut game_assets, &mut game_state);
 }
 
@@ -96,10 +97,9 @@ pub fn load(
     assets_handler.add_animation(&mut game_assets.bull_run,"models/bull.glb#Animation3");
     assets_handler.add_animation(&mut game_assets.bull_walk,"models/bull.glb#Animation4");
     assets_handler.add_glb(&mut game_assets.plate, "models/plate.glb");
-    assets_handler.add_glb(&mut game_assets.intro_level, "models/intro.glb");
-    assets_handler.add_glb(&mut game_assets.level_one, "models/level_one.glb");
     assets_handler.add_glb(&mut game_assets.broken_plate, "models/broken_plate.glb");
     assets_handler.add_glb(&mut game_assets.broken_mug, "models/broken_mug.glb");
+    assets_handler.add_glb(&mut game_assets.broken_fishbowl, "models/fishbowl_empty.glb");
     assets_handler.add_font(&mut game_assets.font, "fonts/monogram.ttf");
 
     assets_handler.add_standard_mesh(&mut game_assets.dust, Mesh::from(shape::Plane { size: 2.0 }));
@@ -116,6 +116,13 @@ pub fn load(
     assets_handler.add_material(&mut game_assets.pa_no_mouth, "textures/pa_nomouth.png", true);
     assets_handler.add_material(&mut game_assets.pa_mouth, "textures/pa_mouth.png", true);
     assets_handler.add_material(&mut game_assets.pa_lookleft, "textures/pa_lookleft.png", true);
+
+    assets_handler.add_glb(&mut game_assets.intro_level, "models/intro.glb");
+    assets_handler.add_glb(&mut game_assets.level_one, "models/level_one.glb");
+    assets_handler.add_glb(&mut game_assets.level_two, "models/level_two.glb");
+    assets_handler.add_glb(&mut game_assets.level_three, "models/level_three.glb");
+    assets_handler.add_glb(&mut game_assets.level_four, "models/level_four.glb");
+    assets_handler.add_glb(&mut game_assets.level_five, "models/level_five.glb");
 }
 
 #[derive(Component)]
@@ -134,13 +141,27 @@ pub fn setup(
 ) {
     println!("Called SETUP");
     game_state.title_screen_cooldown = 1.0;
-    game_state.current_time = 60.0;
+    game_state.current_time = 1120.0;
+    game_state.live_score = 1.0;
 
     let gltf = 
         match game_script_state.current {
             game_script::GameScript::IntroCutscene => assets_gltf.get(&game_assets.intro_level.clone()),
-            game_script::GameScript::LevelOneIntroCutscene => assets_gltf.get(&game_assets.level_one.clone()),
-            game_script::GameScript::LevelOne => assets_gltf.get(&game_assets.level_one.clone()),
+            game_script::GameScript::LevelOneIntroCutscene 
+                | game_script::GameScript::LevelOnePostCutscene 
+                | game_script::GameScript::LevelOne => assets_gltf.get(&game_assets.level_one.clone()),
+            game_script::GameScript::LevelTwoIntroCutscene 
+                | game_script::GameScript::LevelTwoPostCutscene 
+                | game_script::GameScript::LevelTwo => assets_gltf.get(&game_assets.level_two.clone()),
+            game_script::GameScript::LevelThreeIntroCutscene 
+                | game_script::GameScript::LevelThreePostCutscene 
+                | game_script::GameScript::LevelThree => assets_gltf.get(&game_assets.level_three.clone()),
+            game_script::GameScript::LevelFourIntroCutscene 
+                | game_script::GameScript::LevelFourPostCutscene 
+                | game_script::GameScript::LevelFour => assets_gltf.get(&game_assets.level_four.clone()),
+            game_script::GameScript::LevelFiveIntroCutscene 
+                | game_script::GameScript::LevelFivePostCutscene 
+                | game_script::GameScript::LevelFive => assets_gltf.get(&game_assets.level_five.clone()),
             _ => None  
         };
 
@@ -159,6 +180,14 @@ pub fn setup(
                            println!("adding collider");
                            cmds.insert(Collider::from_bevy_mesh(mesh, &ComputedColliderShape::TriMesh).unwrap())
                                .insert(BullCollide);
+                       }
+                   }
+
+                   if name.contains("rotate") {
+                       if let Some(mesh) = mesh {
+                           cmds.insert(Collider::from_bevy_mesh(mesh, &ComputedColliderShape::TriMesh).unwrap())
+                               .insert(RotateEntityMarker)
+                               .insert(RigidBody::KinematicPositionBased);
                        }
                    }
 
@@ -204,7 +233,7 @@ pub fn setup(
                            .insert(bull::Bull::default());
                    }
                    if name.contains("player") {
-                       cmds.insert_bundle(player::PlayerBundle::new())
+                       cmds.insert(player::PlayerBundle::new())
                        .insert(Restitution::coefficient(0.2))
                        .insert(RigidBody::Dynamic)
                        .insert(Velocity::default())
@@ -281,10 +310,13 @@ pub fn setup(
                        cmds.insert(cutscene::MatTalkMarker);
                    }
                    if name.contains("mug") {
-                       Mug::add_components(cmds);
+                       Mug::add_components(cmds, mesh);
                    }
                    if name.contains("plate") {
-                       Plate::add_components(cmds);
+                       Plate::add_components(cmds, mesh);
+                   }
+                   if name.contains("fishbowl") {
+                       FishBowl::add_components(cmds, mesh);
                    }
 
                    cmds.insert(CleanupMarker);
@@ -297,6 +329,12 @@ pub fn setup(
                 commands.insert_resource(AmbientLight {
                     color: Color::WHITE,
                     brightness: 0.00,
+                });
+            },
+            game_script::GameScript::LevelTwo => {
+                commands.insert_resource(AmbientLight {
+                    color: Color::WHITE,
+                    brightness: 0.50,
                 });
             },
             _ => {
@@ -416,6 +454,17 @@ fn handle_lights(
                 fire_jump_time: 0.0,
             });
     }
+    if name.contains("Window") {
+        entity_commands
+            .insert(PointLight {
+                color: Color::rgb(1.00, 0.962, 0.779),
+                intensity: 100000.0,
+                range: 60.6,
+                radius: 12.2,
+                shadows_enabled: true,
+                ..default()
+            });
+    }
 //    color:  1.0, .279, 0
 //    intensity: 58
 // range 20.9
@@ -491,5 +540,17 @@ fn animate_fire(
             transform.translation.z = z;
             fire.fire_jump_time = 0.2;
         }
+    }
+}
+
+#[derive(Component)]
+struct RotateEntityMarker;
+
+fn rotate_rotate_entities(
+    mut items: Query<&mut Transform, With<RotateEntityMarker>>,
+    time: Res<Time>,
+) {
+    for mut transform in &mut items {
+        transform.rotate_y(time.delta_seconds() * 0.5);
     }
 }

@@ -54,7 +54,9 @@ fn main() {
         .add_plugin(bull::BullPlugin)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default().with_physics_scale(10.0))
         .add_plugin(RapierDebugRenderPlugin::default())
-        .add_plugin(NoCameraPlayerPlugin)
+//      .add_plugin(LogDiagnosticsPlugin::default())
+//      .add_plugin(FrameTimeDiagnosticsPlugin::default())
+//      .add_plugin(NoCameraPlayerPlugin)
         .add_plugin(OutlinePlugin)
         .add_plugin(AutoGenerateOutlineNormalsPlugin)
         .add_plugin(billboard::BillboardPlugin)
@@ -105,7 +107,7 @@ pub enum AppState {
 
 pub fn cleanup<T: Component>(mut commands: Commands, entities: Query<Entity, With<T>>) {
     for entity in entities.iter() {
-        commands.entity(entity).despawn_recursive();
+        commands.get_or_spawn(entity).despawn_recursive();
     }
 }
 
@@ -203,16 +205,16 @@ fn debug(
             println!("replacing a thing");
             let transform = parent_transforms.get(parent.get()).unwrap().clone();
             let velocity = velocity.clone();
-            commands.entity(entity).despawn_recursive();
+            commands.get_or_spawn(entity).despawn_recursive();
 
             if let Some(gltf) = assets_gltf.get(&game_assets.broken_plate.clone()) {
-                commands.spawn_bundle(HookedSceneBundle {
+                commands.spawn(HookedSceneBundle {
                     scene: SceneBundle { scene: gltf.scenes[0].clone(), ..default() },
                     hook: SceneHook::new(move |entity, cmds, mesh| {
                         if let Some(name) = entity.get::<Name>().map(|t|t.as_str()) {
                             if name.contains("plate") {
                                 use props::ComponentAdder;
-                                props::BrokenPlate::add_components(cmds); 
+                                props::BrokenPlate::add_components(cmds, mesh); 
                                 cmds.insert(velocity.clone());
                                 cmds.insert(transform.clone());
                             }

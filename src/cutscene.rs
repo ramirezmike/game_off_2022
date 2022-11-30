@@ -364,7 +364,7 @@ fn handle_input(
             // clear out existing text
             for children in text_container.iter() {
                 for entity in children.iter() {
-                    commands.entity(*entity).despawn_recursive();
+                    commands.get_or_spawn(*entity).despawn_recursive();
                 }
             }
         }
@@ -385,7 +385,6 @@ fn play_cutscene(
     mut audio: GameAudio,
 ) {
     let mut camera = camera.single_mut();
-    println!("play Cutscene");
 //    println!("{:?} {:?}", camera.translation, camera.rotation.to_axis_angle());
     if cutscene_state.waiting_on_input { return; }
 
@@ -451,7 +450,251 @@ fn play_cutscene(
                                                 game_camera::INGAME_CAMERA_ROTATION_ANGLE);
                     cutscene_state.cutscene_index = 0;
                     game_script_state.next();
+                    cutscene_state.waiting_on_input = false;
                     assets_handler.load(AppState::InGame, &mut game_assets, &game_state);
+                }
+            }
+        },
+        game_script::GameScript::LevelOnePostCutscene => {
+            match cutscene_state.cutscene_index {
+                0 => {
+                    camera.translation = Vec3::new(22.5, 1.5, 0.0);
+                    camera.rotation = Quat::from_axis_angle(Vec3::new(-0.034182332, -0.9987495, -0.03648749), 1.5735247);
+                    audio.stop_bgm();
+                    cutscene_state.target_camera_translation = Some((Vec3::new(19.3, 1.5, 0.0)));
+                    textbox.queued_text = Some(TextBoxText {
+                        text: "Level One POST Cutscene!".to_string(),
+                        speed: text_speed,
+                        auto: false,
+                        speaking: DisplayCharacter::Mat,
+                    });
+                },
+                _ => {
+                    camera.translation = Vec3::new(game_camera::INGAME_CAMERA_X, 
+                                                   game_camera::INGAME_CAMERA_Y, 
+                                                   0.0);
+                    camera.rotation = Quat::from_axis_angle(game_camera::INGAME_CAMERA_ROTATION_AXIS, 
+                                                game_camera::INGAME_CAMERA_ROTATION_ANGLE);
+                    cutscene_state.cutscene_index = 0;
+                    game_script_state.next();
+                    cutscene_state.waiting_on_input = false;
+                    assets_handler.load(AppState::LoadWorld, &mut game_assets, &game_state);
+                }
+            }
+        },
+        game_script::GameScript::LevelTwoIntroCutscene => {
+            match cutscene_state.cutscene_index {
+                0 => {
+                    camera.translation = Vec3::new(22.5, 1.5, 0.0);
+                    camera.rotation = Quat::from_axis_angle(Vec3::new(-0.034182332, -0.9987495, -0.03648749), 1.5735247);
+                    audio.stop_bgm();
+                    cutscene_state.target_camera_translation = Some((Vec3::new(19.3, 1.5, 0.0)));
+                    textbox.queued_text = Some(TextBoxText {
+                        text: "Level Two Intro Cutscene!".to_string(),
+                        speed: text_speed,
+                        auto: false,
+                        speaking: DisplayCharacter::Mat,
+                    });
+                },
+                _ => {
+                    camera.translation = Vec3::new(game_camera::INGAME_CAMERA_X, 
+                                                   game_camera::INGAME_CAMERA_Y, 
+                                                   0.0);
+                    camera.rotation = Quat::from_axis_angle(game_camera::INGAME_CAMERA_ROTATION_AXIS, 
+                                                game_camera::INGAME_CAMERA_ROTATION_ANGLE);
+                    cutscene_state.cutscene_index = 0;
+                    game_script_state.next();
+                    cutscene_state.waiting_on_input = false;
+                    assets_handler.load(AppState::InGame, &mut game_assets, &game_state);
+                }
+            }
+        },
+        game_script::GameScript::LevelTwoPostCutscene => {
+            match cutscene_state.cutscene_index {
+                0 => {
+                    camera.translation = Vec3::new(22.5, 1.5, 0.0);
+                    camera.rotation = Quat::from_axis_angle(Vec3::new(-0.034182332, -0.9987495, -0.03648749), 1.5735247);
+                    audio.stop_bgm();
+                    cutscene_state.target_camera_translation = Some((Vec3::new(19.3, 1.5, 0.0)));
+                    textbox.queued_text = Some(TextBoxText {
+                        text: "Level Two POST Cutscene!".to_string(),
+                        speed: text_speed,
+                        auto: false,
+                        speaking: DisplayCharacter::Mat,
+                    });
+                },
+                _ => {
+                    camera.translation = Vec3::new(game_camera::INGAME_CAMERA_X, 
+                                                   game_camera::INGAME_CAMERA_Y, 
+                                                   0.0);
+                    camera.rotation = Quat::from_axis_angle(game_camera::INGAME_CAMERA_ROTATION_AXIS, 
+                                                game_camera::INGAME_CAMERA_ROTATION_ANGLE);
+                    cutscene_state.cutscene_index = 0;
+                    game_script_state.next();
+                    cutscene_state.waiting_on_input = false;
+                    assets_handler.load(AppState::LoadWorld, &mut game_assets, &game_state);
+                }
+            }
+        },
+        game_script::GameScript::LevelThreeIntroCutscene => {
+            match cutscene_state.cutscene_index {
+                0 => {
+                    camera.translation = Vec3::new(22.5, 1.5, 0.0);
+                    camera.rotation = Quat::from_axis_angle(Vec3::new(-0.034182332, -0.9987495, -0.03648749), 1.5735247);
+                    audio.stop_bgm();
+                    cutscene_state.target_camera_translation = Some((Vec3::new(19.3, 1.5, 0.0)));
+                    textbox.queued_text = Some(TextBoxText {
+                        text: "Level Three Intro Cutscene!".to_string(),
+                        speed: text_speed,
+                        auto: false,
+                        speaking: DisplayCharacter::Mat,
+                    });
+                },
+                _ => {
+                    camera.translation = Vec3::new(game_camera::INGAME_CAMERA_X, 
+                                                   game_camera::INGAME_CAMERA_Y, 
+                                                   0.0);
+                    camera.rotation = Quat::from_axis_angle(game_camera::INGAME_CAMERA_ROTATION_AXIS, 
+                                                game_camera::INGAME_CAMERA_ROTATION_ANGLE);
+                    cutscene_state.cutscene_index = 0;
+                    game_script_state.next();
+                    cutscene_state.waiting_on_input = false;
+                    assets_handler.load(AppState::InGame, &mut game_assets, &game_state);
+                }
+            }
+        },
+        game_script::GameScript::LevelThreePostCutscene => {
+            match cutscene_state.cutscene_index {
+                0 => {
+                    camera.translation = Vec3::new(22.5, 1.5, 0.0);
+                    camera.rotation = Quat::from_axis_angle(Vec3::new(-0.034182332, -0.9987495, -0.03648749), 1.5735247);
+                    audio.stop_bgm();
+                    cutscene_state.target_camera_translation = Some((Vec3::new(19.3, 1.5, 0.0)));
+                    textbox.queued_text = Some(TextBoxText {
+                        text: "Level Three POST Cutscene!".to_string(),
+                        speed: text_speed,
+                        auto: false,
+                        speaking: DisplayCharacter::Mat,
+                    });
+                },
+                _ => {
+                    camera.translation = Vec3::new(game_camera::INGAME_CAMERA_X, 
+                                                   game_camera::INGAME_CAMERA_Y, 
+                                                   0.0);
+                    camera.rotation = Quat::from_axis_angle(game_camera::INGAME_CAMERA_ROTATION_AXIS, 
+                                                game_camera::INGAME_CAMERA_ROTATION_ANGLE);
+                    cutscene_state.cutscene_index = 0;
+                    game_script_state.next();
+                    cutscene_state.waiting_on_input = false;
+                    assets_handler.load(AppState::LoadWorld, &mut game_assets, &game_state);
+                }
+            }
+        },
+        game_script::GameScript::LevelFourIntroCutscene => {
+            match cutscene_state.cutscene_index {
+                0 => {
+                    camera.translation = Vec3::new(22.5, 1.5, 0.0);
+                    camera.rotation = Quat::from_axis_angle(Vec3::new(-0.034182332, -0.9987495, -0.03648749), 1.5735247);
+                    audio.stop_bgm();
+                    cutscene_state.target_camera_translation = Some((Vec3::new(19.3, 1.5, 0.0)));
+                    textbox.queued_text = Some(TextBoxText {
+                        text: "Level Four Intro Cutscene!".to_string(),
+                        speed: text_speed,
+                        auto: false,
+                        speaking: DisplayCharacter::Mat,
+                    });
+                },
+                _ => {
+                    camera.translation = Vec3::new(game_camera::INGAME_CAMERA_X, 
+                                                   game_camera::INGAME_CAMERA_Y, 
+                                                   0.0);
+                    camera.rotation = Quat::from_axis_angle(game_camera::INGAME_CAMERA_ROTATION_AXIS, 
+                                                game_camera::INGAME_CAMERA_ROTATION_ANGLE);
+                    cutscene_state.cutscene_index = 0;
+                    game_script_state.next();
+                    cutscene_state.waiting_on_input = false;
+                    assets_handler.load(AppState::InGame, &mut game_assets, &game_state);
+                }
+            }
+        },
+        game_script::GameScript::LevelFourPostCutscene => {
+            match cutscene_state.cutscene_index {
+                0 => {
+                    camera.translation = Vec3::new(22.5, 1.5, 0.0);
+                    camera.rotation = Quat::from_axis_angle(Vec3::new(-0.034182332, -0.9987495, -0.03648749), 1.5735247);
+                    audio.stop_bgm();
+                    cutscene_state.target_camera_translation = Some((Vec3::new(19.3, 1.5, 0.0)));
+                    textbox.queued_text = Some(TextBoxText {
+                        text: "Level Four POST Cutscene!".to_string(),
+                        speed: text_speed,
+                        auto: false,
+                        speaking: DisplayCharacter::Mat,
+                    });
+                },
+                _ => {
+                    camera.translation = Vec3::new(game_camera::INGAME_CAMERA_X, 
+                                                   game_camera::INGAME_CAMERA_Y, 
+                                                   0.0);
+                    camera.rotation = Quat::from_axis_angle(game_camera::INGAME_CAMERA_ROTATION_AXIS, 
+                                                game_camera::INGAME_CAMERA_ROTATION_ANGLE);
+                    cutscene_state.cutscene_index = 0;
+                    game_script_state.next();
+                    cutscene_state.waiting_on_input = false;
+                    assets_handler.load(AppState::LoadWorld, &mut game_assets, &game_state);
+                }
+            }
+        },
+        game_script::GameScript::LevelFiveIntroCutscene => {
+            match cutscene_state.cutscene_index {
+                0 => {
+                    camera.translation = Vec3::new(22.5, 1.5, 0.0);
+                    camera.rotation = Quat::from_axis_angle(Vec3::new(-0.034182332, -0.9987495, -0.03648749), 1.5735247);
+                    audio.stop_bgm();
+                    cutscene_state.target_camera_translation = Some((Vec3::new(19.3, 1.5, 0.0)));
+                    textbox.queued_text = Some(TextBoxText {
+                        text: "Level Five Intro Cutscene!".to_string(),
+                        speed: text_speed,
+                        auto: false,
+                        speaking: DisplayCharacter::Mat,
+                    });
+                },
+                _ => {
+                    camera.translation = Vec3::new(game_camera::INGAME_CAMERA_X, 
+                                                   game_camera::INGAME_CAMERA_Y, 
+                                                   0.0);
+                    camera.rotation = Quat::from_axis_angle(game_camera::INGAME_CAMERA_ROTATION_AXIS, 
+                                                game_camera::INGAME_CAMERA_ROTATION_ANGLE);
+                    cutscene_state.cutscene_index = 0;
+                    game_script_state.next();
+                    cutscene_state.waiting_on_input = false;
+                    assets_handler.load(AppState::InGame, &mut game_assets, &game_state);
+                }
+            }
+        },
+        game_script::GameScript::LevelFivePostCutscene => {
+            match cutscene_state.cutscene_index {
+                0 => {
+                    camera.translation = Vec3::new(22.5, 1.5, 0.0);
+                    camera.rotation = Quat::from_axis_angle(Vec3::new(-0.034182332, -0.9987495, -0.03648749), 1.5735247);
+                    audio.stop_bgm();
+                    cutscene_state.target_camera_translation = Some((Vec3::new(19.3, 1.5, 0.0)));
+                    textbox.queued_text = Some(TextBoxText {
+                        text: "Level Five POST Cutscene!".to_string(),
+                        speed: text_speed,
+                        auto: false,
+                        speaking: DisplayCharacter::Mat,
+                    });
+                },
+                _ => {
+                    camera.translation = Vec3::new(game_camera::INGAME_CAMERA_X, 
+                                                   game_camera::INGAME_CAMERA_Y, 
+                                                   0.0);
+                    camera.rotation = Quat::from_axis_angle(game_camera::INGAME_CAMERA_ROTATION_AXIS, 
+                                                game_camera::INGAME_CAMERA_ROTATION_ANGLE);
+                    cutscene_state.cutscene_index = 0;
+                    game_script_state.next();
+                    cutscene_state.waiting_on_input = false;
+                    assets_handler.load(AppState::LoadWorld, &mut game_assets, &game_state);
                 }
             }
         },

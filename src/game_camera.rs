@@ -183,10 +183,21 @@ fn get_primary_window_size(windows: &Res<Windows>) -> Vec2 {
 pub fn look_at_player(
     players: Query<&Transform, (With<player::Player>, Without<Camera3d>)>,
     mut cameras: Query<&mut Transform, (With<Camera3d>, Without<player::Player>)>,
+    time: Res<Time>,
 ) {
     for mut camera_transform in &mut cameras {
         for player_transform in &players {
             camera_transform.look_at(player_transform.translation, Vec3::Y);
+
+            if player_transform.translation.x >= -2.0 {
+                let target = Vec3::new(-15.0, INGAME_CAMERA_Y, 0.0);
+                let diff = target - camera_transform.translation;
+                camera_transform.translation += diff * time.delta_seconds();
+            } else {
+                let target = Vec3::new(INGAME_CAMERA_X, INGAME_CAMERA_Y, 0.0);
+                let diff = target - camera_transform.translation;
+                camera_transform.translation += diff * time.delta_seconds();
+            }
         }
     }
 }

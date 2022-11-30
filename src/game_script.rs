@@ -14,8 +14,26 @@ impl Plugin for GameScriptPlugin {
 #[derive(Debug)]
 pub enum GameScript {
     IntroCutscene,
+    PreLevelOneCutscene,
     LevelOneIntroCutscene,
     LevelOne,
+    LevelOnePostCutscene,
+
+    LevelTwoIntroCutscene,
+    LevelTwo,
+    LevelTwoPostCutscene,
+
+    LevelThreeIntroCutscene,
+    LevelThree,
+    LevelThreePostCutscene,
+
+    LevelFourIntroCutscene,
+    LevelFour,
+    LevelFourPostCutscene,
+
+    LevelFiveIntroCutscene,
+    LevelFive,
+    LevelFivePostCutscene,
 }
 
 #[derive(Resource)]
@@ -37,7 +55,25 @@ impl GameScriptState {
         self.current = match self.current {
             GameScript::IntroCutscene => GameScript::LevelOneIntroCutscene,
             GameScript::LevelOneIntroCutscene => GameScript::LevelOne,
-            GameScript::LevelOne => GameScript::IntroCutscene,
+            GameScript::LevelOne => GameScript::LevelOnePostCutscene,
+            GameScript::LevelOnePostCutscene => GameScript::LevelTwoIntroCutscene,
+
+            GameScript::LevelTwoIntroCutscene => GameScript::LevelTwo,
+            GameScript::LevelTwo => GameScript::LevelTwoPostCutscene,
+            GameScript::LevelTwoPostCutscene => GameScript::LevelThreeIntroCutscene,
+
+            GameScript::LevelThreeIntroCutscene => GameScript::LevelThree,
+            GameScript::LevelThree => GameScript::LevelThreePostCutscene,
+            GameScript::LevelThreePostCutscene => GameScript::LevelFourIntroCutscene,
+
+            GameScript::LevelFourIntroCutscene => GameScript::LevelFour,
+            GameScript::LevelFour => GameScript::LevelFourPostCutscene,
+            GameScript::LevelFourPostCutscene => GameScript::LevelFiveIntroCutscene,
+
+            GameScript::LevelFiveIntroCutscene => GameScript::LevelFive,
+            GameScript::LevelFive => GameScript::LevelFivePostCutscene,
+            GameScript::LevelFivePostCutscene => GameScript::IntroCutscene, // todo: end?
+
             _ => GameScript::IntroCutscene
         };
         println!("to {:?}", self.current);
@@ -52,9 +88,23 @@ fn load_state(
 ) {
     println!("Loading state {:?}", game_script_state.current);
     match game_script_state.current {
-        GameScript::IntroCutscene => assets_handler.load(AppState::Cutscene, &mut game_assets, &game_state),
-        GameScript::LevelOneIntroCutscene => assets_handler.load(AppState::Cutscene, &mut game_assets, &game_state),
-        GameScript::LevelOne => assets_handler.load(AppState::InGame, &mut game_assets, &game_state),
+        GameScript::IntroCutscene 
+        | GameScript::LevelOneIntroCutscene 
+        | GameScript::LevelOnePostCutscene 
+        | GameScript::LevelTwoIntroCutscene 
+        | GameScript::LevelTwoPostCutscene 
+        | GameScript::LevelThreeIntroCutscene 
+        | GameScript::LevelThreePostCutscene 
+        | GameScript::LevelFourIntroCutscene
+        | GameScript::LevelFourPostCutscene
+        | GameScript::LevelFiveIntroCutscene
+        | GameScript::LevelFivePostCutscene => assets_handler.load(AppState::Cutscene, &mut game_assets, &game_state),
+
+        GameScript::LevelOne
+        | GameScript::LevelTwo
+        | GameScript::LevelThree 
+        | GameScript::LevelFour
+        | GameScript::LevelFive => assets_handler.load(AppState::InGame, &mut game_assets, &game_state),
         _ => ()
     }
 }

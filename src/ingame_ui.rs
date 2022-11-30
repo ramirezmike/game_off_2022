@@ -21,22 +21,27 @@ struct Star(usize);
 fn update_ui(
     game_state: Res<game_state::GameState>,
     game_assets: Res<GameAssets>,
-    mut stars: Query<(&mut UiImage, &Star)>,
-    mut time_indicators: Query<&mut Text, (With<TimeIndicator>, Without<ScoreIndicator>)>,
+    mut time_indicators: Query<&mut Text, (With<TimeIndicator>, Without<DestroyedIndicator>)>,
+    mut destroyed_indicators: Query<&mut Text, (With<DestroyedIndicator>, Without<TimeIndicator>)>,
 ) {
-    let current_score = game_state.score * 5.0;
-    for (mut image, star) in stars.iter_mut() {
-        let star_value = star.0 as f32;
-        if star_value + 0.5 < current_score {
-            image.0 = game_assets.star_full_texture.image.clone();
-        } else if star_value < current_score {
-            image.0 = game_assets.star_half_texture.image.clone();
-        } else {
-            image.0 = game_assets.star_empty_texture.image.clone();
-        }
-    }
+//    println!("Current score {}", game_state.live_score);
+    let current_score = (1.0 - game_state.live_score) * 100.0;
+//  for (mut image, star) in stars.iter_mut() {
+//      let star_value = star.0 as f32;
+//      if star_value + 0.5 < current_score {
+//          image.0 = game_assets.star_full_texture.image.clone();
+//      } else if star_value < current_score {
+//          image.0 = game_assets.star_half_texture.image.clone();
+//      } else {
+//          image.0 = game_assets.star_empty_texture.image.clone();
+//      }
+//  }
 
-    for mut text in time_indicators.iter_mut() {
+    for mut destroyed in &mut destroyed_indicators {
+        destroyed.sections[0].value = format!("{}%", current_score as usize);
+        destroyed.sections[0].style.color = Color::rgb(game_state.live_score, 1.0 - game_state.live_score, 0.0);
+    }
+    for mut text in &mut time_indicators {
         text.sections[0].value = format!("{:0>2}:{:0>2}", (game_state.current_time / 60.0) as usize, 
                                                   (game_state.current_time % 60.0) as usize);
     }
@@ -56,7 +61,7 @@ fn setup(
                 position_type: PositionType::Absolute,
                 justify_content: JustifyContent::FlexStart,
                 align_items: AlignItems::FlexStart,
-                flex_direction: FlexDirection::Column,
+                flex_direction: FlexDirection::Row,
                 ..Default::default()
             },
             background_color: Color::NONE.into(),
@@ -69,9 +74,9 @@ fn setup(
                     style: Style {
                         size: Size::new(Val::Percent(50.0), Val::Percent(15.0)),
                         position_type: PositionType::Relative,
-                        justify_content: JustifyContent::Center,
+                        justify_content: JustifyContent::FlexStart,
                         margin: UiRect {
-                            left: Val::Auto,
+                            left: Val::Percent(2.0),
                             right: Val::Auto,
                             ..default()
                         },
@@ -83,50 +88,34 @@ fn setup(
                     ..Default::default()
                 })
                 .with_children(|parent| {
-                    for i in 0..5 {
-                        parent 
-                             .spawn(NodeBundle {
-                                 style: Style {
-                                     size: Size::new(Val::Percent(20.0), Val::Percent(33.0)),
-                                     position_type: PositionType::Relative,
-                                     justify_content: JustifyContent::Center,
-                                     align_items: AlignItems::Center,
-                                     flex_direction: FlexDirection::Row,
-                                     margin: UiRect {
-                                         left: Val::Auto,
-                                         right: Val::Auto,
-                                         ..Default::default()
-                                     },
-                                     ..Default::default()
-                                 },
-                                 background_color: Color::NONE.into(),
-                                 ..Default::default()
-                             })
-                             .with_children(|parent| {
-                                 parent.spawn(ImageBundle {
-                                     style: Style {
-                                         size: Size::new(Val::Percent(STAR_SIZE), Val::Auto),
-                                         ..Default::default()
-                                     },
-                                     image: game_assets.star_full_texture.image.clone().into(),
-                                     ..Default::default()
-                                 })
-                                 .insert(Star(i));
-                             });
-                    }
+                    add_title(
+                        parent,
+                        game_assets.font.clone(),
+                        text_scaler.scale(menus::DEFAULT_FONT_SIZE * 0.6),
+                        "Destroyed: ",
+                        Vec::<ingame::CleanupMarker>::new(), // just an empty vec since can't do <impl Trait>
+                    );
+                    add_title(
+                        parent,
+                        game_assets.font.clone(),
+                        text_scaler.scale(menus::DEFAULT_FONT_SIZE * 0.6),
+                        "0%",
+                        vec!(DestroyedIndicator), // just an empty vec since can't do <impl Trait>
+                    );
                 });
             parent
-                .spawn_bundle(NodeBundle {
+                .spawn(NodeBundle {
                     style: Style {
-                        size: Size::new(Val::Percent(100.0), Val::Percent(5.0)),
+                        size: Size::new(Val::Percent(50.0), Val::Percent(15.0)),
                         position_type: PositionType::Relative,
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::FlexStart,
-                        flex_direction: FlexDirection::Row,
+                        justify_content: JustifyContent::FlexEnd,
                         margin: UiRect {
-                            //top: Val::Percent(-10.0),
-                            ..Default::default()
+                            left: Val::Auto,
+                            right: Val::Percent(2.0),
+                            ..default()
                         },
+                        align_items: AlignItems::Center,
+                        flex_direction: FlexDirection::Row,
                         ..Default::default()
                     },
                     background_color: Color::NONE.into(),
@@ -156,6 +145,9 @@ struct ScoreIndicator;
 
 #[derive(Component)]
 struct TimeIndicator;
+
+#[derive(Component)]
+struct DestroyedIndicator;
 
 pub fn add_title(
     builder: &mut ChildBuilder<'_, '_, '_>,

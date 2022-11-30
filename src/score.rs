@@ -4,6 +4,7 @@ use crate::{
 };
 use std::collections::HashMap;
 
+pub const BREAK_DISTANCE: f32 = 0.5;
 pub struct ScorePlugin;
 impl Plugin for ScorePlugin {
     fn build(&self, app: &mut App) {
@@ -25,7 +26,7 @@ fn track_round_time(
 ) {
     game_state.current_time -= time.delta_seconds();
     
-    if game_state.current_time < 0.0 {
+    if game_state.current_time < 0.0 || game_state.live_score <= 0.0 {
         cutscene_state.cutscene_index = 0;
         game_script_state.next();
         assets_handler.load(AppState::Cutscene, &mut game_assets, &game_state);
@@ -44,7 +45,7 @@ fn check_score(
     if *cooldown > 0.0 {
         return;
     }
-    *cooldown = 2.0;
+    *cooldown = 1.0;
 
     let grouped_translations = 
         group_members.iter()
@@ -63,8 +64,8 @@ fn check_score(
         group_count += 1; 
 
         for (current, original, _) in translations.iter() {
-            let distance = current.distance(*original);
-            if distance > 1.0 {
+            let distance = (current.y - original.y).abs();
+            if distance > BREAK_DISTANCE {
                 group_broken_count += 1;
                 break;
             }
@@ -74,10 +75,12 @@ fn check_score(
     if group_count > 0 {
         game_state.score_check_count += 1;
         let current = 1.0 - (group_broken_count as f32 / group_count as f32);
+        game_state.live_score = current;
         // add as a running average of the score
         game_state.score = (game_state.score * (game_state.score_check_count - 1) as f32 + current) 
                             / game_state.score_check_count as f32;
-        println!("Score {} ( {} / {} )", game_state.score, group_broken_count, group_count);
+        game_state.live_score = current;
+//        println!("Score {} {} ( {} / {} )", game_state.live_score, game_state.score, group_broken_count, group_count);
     }
 }
 

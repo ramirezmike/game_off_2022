@@ -1,12 +1,12 @@
 use bevy::prelude::*;
 use bevy::ecs::system::EntityCommands;
 use crate::{
-    AppState, assets::GameAssets, game_state, groups, ZeroSignum, dust,
+    AppState, assets::GameAssets, game_state, groups, ZeroSignum, dust, score,
 };
 use std::collections::HashMap;
 
 const DUST_RATE: f32 = 0.2;
-const REPAIR_TIME: f32 = 1.0;
+const REPAIR_TIME: f32 = 5.0;
 pub struct ShopKeeperPlugin;
 impl Plugin for ShopKeeperPlugin {
     fn build(&self, app: &mut App) {
@@ -194,7 +194,9 @@ fn think_shopkeepers(
     group_members: Query<(&groups::GroupMember, &Transform, &GlobalTransform)>,
 ) {
     for (_, mut keeper) in &mut shopkeepers {
-        if keeper.target.is_some() && keeper.target.unwrap().0 != 0 { continue; }
+// this makes keeper check constantly
+//        if keeper.target.is_some() && keeper.target.unwrap().0 != 0 { continue; } 
+        if keeper.target.is_some() { continue; }
 
         keeper.cleanup_cooldown -= time.delta_seconds();
         keeper.cleanup_cooldown = keeper.cleanup_cooldown.clamp(0.0, 10.0);
@@ -213,8 +215,8 @@ fn think_shopkeepers(
                              });
             'outer: for (group_id, translations) in grouped_translations.iter() {
                 for (current, original, target) in translations.iter() {
-                    let distance = current.distance(*original);
-                    if distance > 1.0 {
+                    let distance = (current.y - original.y).abs();
+                    if distance > score::BREAK_DISTANCE {
                         println!("setting target! {}", target);
                         keeper.target = Some((*group_id, target.clone()));
                         break 'outer;
@@ -222,7 +224,7 @@ fn think_shopkeepers(
                 }
             }
 
-            keeper.cleanup_cooldown = 5.0;
+            keeper.cleanup_cooldown = 10.0;
         }
     }
 }

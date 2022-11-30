@@ -170,7 +170,7 @@ fn handle_bull_charge_event(
     for event in charge_event_reader.iter() {
         for mut bull in &mut bulls {
             if event.charging && bull.charging_cooldown <= 0.0 {
-                bull.charging_cooldown = CHARGE_LIMIT;
+                bull.charging_cooldown = CHARGE_LIMIT / 2.0;
                 bull.state = BullState::Charging;
             } else if !event.charging {
                 // ?
@@ -329,16 +329,16 @@ fn update_bulls(
         match bull.state {
             BullState::Running => {
                 bull.charging_cooldown -= time.delta_seconds();
-                if bull.charging_cooldown <= CHARGE_LIMIT {
-                    let direction = velocity.linvel.normalize();
-                    velocity.linvel += (direction * speed) * time.delta_seconds();
-                } else {
+//              if bull.charging_cooldown <= CHARGE_LIMIT {
+//                  let direction = velocity.linvel.normalize();
+//                  velocity.linvel += (direction * speed) * time.delta_seconds();
+//              } else {
                     for (player_transform, _) in &players {
                         let acceleration = player_transform.translation - transform.translation;
                         let acceleration = Vec3::new(acceleration.x, 0.0, acceleration.z);
                         velocity.linvel += (acceleration.normalize() * speed) * time.delta_seconds();
                     }
-                }
+//              }
 
                 if bull.charging_cooldown <= 0.0 {
                     bull.state = BullState::Idle;

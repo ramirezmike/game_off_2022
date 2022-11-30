@@ -27,7 +27,7 @@ impl Plugin for PropsPlugin {
 
 //pub trait AddComponentFn = Fn(&mut EntityCommands);
 pub trait ComponentAdder {
-    fn add_components(entity_commands: &mut EntityCommands);
+    fn add_components(entity_commands: &mut EntityCommands, mesh: Option<&Mesh>);
 }
 
 pub struct BreakEvent;
@@ -40,6 +40,7 @@ pub struct Breakable {
 pub enum BreakableType {
     Plate,
     Mug,
+    FishBowl,
 }
 
 #[derive(Component)]
@@ -50,6 +51,10 @@ pub struct BrokenPlate;
 pub struct Mug;
 #[derive(Component)]
 pub struct BrokenMug;
+#[derive(Component)]
+pub struct FishBowl;
+#[derive(Component)]
+pub struct BrokenFishBowl;
 
 fn add_dynamic_rapier_components_for_props(entity_commands: &mut EntityCommands) {
     entity_commands
@@ -93,7 +98,7 @@ fn add_breakable_rapier_components(entity_commands: &mut EntityCommands) {
 }
 
 impl ComponentAdder for Plate {
-    fn add_components(entity_commands: &mut EntityCommands) {
+    fn add_components(entity_commands: &mut EntityCommands, mesh: Option::<&Mesh>) {
         entity_commands
             .insert(Collider::cuboid(0.3, 0.05, 0.3))
             .insert(Breakable {
@@ -108,7 +113,7 @@ impl ComponentAdder for Plate {
 
 
 impl ComponentAdder for BrokenPlate {
-    fn add_components(entity_commands: &mut EntityCommands) {
+    fn add_components(entity_commands: &mut EntityCommands, mesh: Option::<&Mesh>) {
         entity_commands
             .insert(Collider::cuboid(0.3, 0.05, 0.3))
             .insert(BrokenPlate)
@@ -118,7 +123,7 @@ impl ComponentAdder for BrokenPlate {
 }
 
 impl ComponentAdder for Mug {
-    fn add_components(entity_commands: &mut EntityCommands) {
+    fn add_components(entity_commands: &mut EntityCommands, mesh: Option::<&Mesh>) {
         entity_commands
             .insert(Collider::cuboid(0.3, 0.05, 0.3))
             .insert(Breakable {
@@ -133,11 +138,42 @@ impl ComponentAdder for Mug {
 
 
 impl ComponentAdder for BrokenMug {
-    fn add_components(entity_commands: &mut EntityCommands) {
+    fn add_components(entity_commands: &mut EntityCommands, mesh: Option::<&Mesh>) {
         entity_commands
             .insert(Collider::cuboid(0.3, 0.05, 0.3))
             .insert(ingame::CleanupMarker)
             .insert(BrokenMug);
+        add_dynamic_rapier_components_for_props(entity_commands);
+    }
+}
+
+impl ComponentAdder for FishBowl {
+    fn add_components(entity_commands: &mut EntityCommands, mesh: Option::<&Mesh>) {
+        let mesh = mesh.expect("Fishbowl requires mesh");
+        entity_commands
+            .insert(Collider::from_bevy_mesh(mesh, &ComputedColliderShape::TriMesh).unwrap())
+            .insert(Breakable {
+                breakable_type: BreakableType::FishBowl,
+            })
+            .insert(FishBowl)
+            .insert(ingame::CleanupMarker);
+        add_dynamic_rapier_components_for_props(entity_commands);
+        add_breakable_rapier_components(entity_commands);
+//        let threshold = 1.00000;
+
+        entity_commands.insert(ColliderMassProperties::Density(0.0001));
+//        entity_commands.insert(ContactForceEventThreshold(threshold));
+    }
+}
+
+
+impl ComponentAdder for BrokenFishBowl {
+    fn add_components(entity_commands: &mut EntityCommands, mesh: Option::<&Mesh>) {
+        let mesh = mesh.expect("BrokenFishbowl requires mesh");
+        entity_commands
+            .insert(Collider::from_bevy_mesh(mesh, &ComputedColliderShape::TriMesh).unwrap())
+            .insert(BrokenFishBowl)
+            .insert(ingame::CleanupMarker);
         add_dynamic_rapier_components_for_props(entity_commands);
     }
 }
@@ -153,7 +189,7 @@ fn handle_break_events(
 
 fn handle_breakables(
     mut commands: Commands,
-    breakables: Query<(&Breakable, &Transform, &Velocity)>,
+    breakables: Query<(&Breakable, &GlobalTransform, &Velocity)>,
     mut contact_force_events: EventReader<ContactForceEvent>,
     assets_gltf: Res<Assets<Gltf>>,
     game_assets: Res<assets::GameAssets>,
@@ -169,24 +205,32 @@ fn handle_breakables(
                     let mut entity_commands = commands.entity(*entity);
                     remove_dynamic_rapier_components_for_props(&mut entity_commands);
 
-                    let transform = transform.clone();
+                    let transform = transform.compute_transform();
                     let velocity = velocity.clone();
                     let (asset, mesh_name, adder) = match breakable.breakable_type {
                         BreakableType::Plate => (&game_assets.broken_plate, "plate", 
-                                           Box::new(BrokenPlate::add_components) as Box<dyn Fn(&mut EntityCommands) + Send + Sync>),
+                                           Box::new(BrokenPlate::add_components) as Box<dyn Fn(&mut EntityCommands, Option::<&Mesh>) + Send + Sync>),
                         BreakableType::Mug => (&game_assets.broken_mug, "mug", 
-                                           Box::new(BrokenMug::add_components) as Box<dyn Fn(&mut EntityCommands) + Send + Sync>),
+                                           Box::new(BrokenMug::add_components) as Box<dyn Fn(&mut EntityCommands, Option::<&Mesh>) + Send + Sync>),
+                        BreakableType::FishBowl => (&game_assets.broken_fishbowl, "bowl", 
+                                           Box::new(BrokenFishBowl::add_components) as Box<dyn Fn(&mut EntityCommands, Option::<&Mesh>) + Send + Sync>),
                     };
 
                     if let Some(gltf) = assets_gltf.get(asset) {
                         commands.spawn(HookedSceneBundle {
                             scene: SceneBundle { scene: gltf.scenes[0].clone(), ..default() },
-                            hook: SceneHook::new(move |entity, cmds, _| {
+                            hook: SceneHook::new(move |entity, cmds, mesh| {
                                 if let Some(name) = entity.get::<Name>().map(|t|t.as_str()) {
                                     if name.contains(mesh_name) {
-                                        adder(cmds); 
+                                        adder(cmds, mesh); 
                                         cmds.insert(velocity.clone());
                                         cmds.insert(transform.clone());
+                                    }
+
+                                    if name.contains("Fish") {
+                                        println!("Found fish");
+                                        cmds.insert(Fish)
+                                            .insert(ingame::CleanupMarker);
                                     }
                                 }
                             })
@@ -196,3 +240,6 @@ fn handle_breakables(
             });
     }
 }
+
+#[derive(Component)]
+struct Fish;
