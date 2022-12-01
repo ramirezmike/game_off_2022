@@ -1,6 +1,6 @@
 use crate::{
     asset_loading, assets::GameAssets, audio::GameAudio, cleanup, game_controller, menus, 
-    ui::text_size, AppState, menus::HOVERED_BUTTON, menus::NORMAL_BUTTON,
+    ui::text_size, AppState, menus::HOVERED_BUTTON, menus::NORMAL_BUTTON, game_state, assets,
 };
 use bevy::app::AppExit;
 use bevy::ecs::event::Events;
@@ -61,7 +61,7 @@ impl MenuAction {
         input_map.insert(KeyCode::D, Right);
         input_map.insert(GamepadButtonType::DPadRight, Right);
 
-        input_map.insert(KeyCode::Space, Select);
+//        input_map.insert(KeyCode::Space, Select);
         input_map.insert(KeyCode::Return, Select);
         input_map.insert(GamepadButtonType::South, Select);
 
@@ -73,7 +73,8 @@ pub fn load(
     assets_handler: &mut asset_loading::AssetsHandler,
     game_assets: &mut ResMut<GameAssets>,
 ) {
-//    assets_handler.add_audio(&mut game_assets.titlescreen, "audio/titlescreen.ogg");
+    println!("loading assets");
+    assets_handler.add_audio(&mut game_assets.title_screen_bgm, "audio/title_screen_bgm.ogg");
     assets_handler.add_audio(&mut game_assets.blip, "audio/blip.wav");
     assets_handler.add_font(&mut game_assets.font, "fonts/monogram.ttf");
     assets_handler.add_material(
@@ -89,8 +90,10 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut images: ResMut<Assets<Image>>,
     mut audio: GameAudio,
+    mut clear_color: ResMut<ClearColor>,
     text_scaler: text_size::TextScaler,
 ) {
+    println!("Setting up camera");
     commands
         .spawn(InputManagerBundle {
             input_map: MenuAction::default_input_map(),
@@ -108,37 +111,57 @@ fn setup(
             transform: Transform::from_xyz(0.0, 5.0, -0.0001).looking_at(Vec3::ZERO, Vec3::Y),
             ..Default::default()
         })
-        .with_children(|parent| {
-            const HALF_SIZE: f32 = 100.0;
-            parent.spawn(DirectionalLightBundle {
-                directional_light: DirectionalLight {
-                    // Configure the projection to better fit the scene
-                    //illuminance: 50000.0,
-                    shadow_projection: OrthographicProjection {
-                        left: -HALF_SIZE,
-                        right: HALF_SIZE,
-                        bottom: -HALF_SIZE,
-                        top: HALF_SIZE,
-                        near: -10.0 * HALF_SIZE,
-                        far: 10.0 * HALF_SIZE,
-                        ..Default::default()
-                    },
-                    shadows_enabled: false,
-                    ..Default::default()
-                },
-                transform: Transform {
-                    rotation: Quat::from_rotation_x(-std::f32::consts::FRAC_PI_4),
-                    ..Default::default()
-                },
-                ..Default::default()
-            });
-        })
         .insert(TitleScreenCleanupMarker);
+
+    clear_color.0 = Color::hex("fffffa").unwrap(); 
+    let image_height = 512.0;
+    let scale = (text_scaler.window_size.height * 0.8) / image_height;
+
+//        commands.spawn(ImageBundle {
+//  //        transform: {
+//  //            let height = (text_scaler.window_size.height / 2.0) * 0.224;
+//  //            let mut t = Transform::from_translation(Vec3::new(0.0, height, 0.0));
+//  //            t.scale *= scale;
+//  //            t
+//  //        },
+//            texture: ,
+//            ..Default::default()
+//          })
+//      .insert(TitleScreenCleanupMarker);
+     commands 
+             .spawn(NodeBundle {
+                 style: Style {
+                     size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+                     position_type: PositionType::Absolute,
+                     justify_content: JustifyContent::Center,
+                     align_items: AlignItems::Center,
+                     flex_direction: FlexDirection::Row,
+                     margin: UiRect {
+                         left: Val::Auto,
+                         right: Val::Auto,
+                         ..Default::default()
+                     },
+                     ..Default::default()
+                 },
+                 background_color: Color::NONE.into(),
+                 ..Default::default()
+             })
+             .with_children(|parent| {
+                 parent.spawn(ImageBundle {
+                     style: Style {
+                         size: Size::new(Val::Percent(50.0), Val::Auto),
+                         ..Default::default()
+                     },
+                     image: game_assets.title_screen_logo.image.clone().into(),
+                     ..Default::default()
+                 });
+             })
+          .insert(TitleScreenCleanupMarker);
 
     commands
         .spawn(TextBundle {
             style: Style {
-                align_self: AlignSelf::FlexEnd,
+                align_self: AlignSelf::FlexStart,
                 position_type: PositionType::Absolute,
                 position: UiRect {
                     bottom: Val::Px(5.0),
@@ -165,14 +188,14 @@ fn setup(
                 size: Size::new(Val::Percent(30.0), Val::Percent(25.0)),
                 position_type: PositionType::Relative,
                 justify_content: JustifyContent::Center,
-                flex_direction: FlexDirection::ColumnReverse,
+                flex_direction: FlexDirection::Column,
                 margin: UiRect {
                     left: Val::Auto,
                     right: Val::Auto,
-                    top: Val::Percent(60.0),
+                    top: Val::Percent(40.0),
                     ..Default::default()
                 },
-                align_items: AlignItems::FlexStart,
+                align_items: AlignItems::FlexEnd,
                 ..Default::default()
             },
             background_color: Color::NONE.into(),
@@ -237,7 +260,7 @@ fn setup(
                 .insert(TitleScreenCleanupMarker);
         });
 
-//    audio.play_bgm(&game_assets.titlescreen);
+    audio.play_bgm(&game_assets.title_screen_bgm);
 }
 
 fn update_menu_buttons(
@@ -248,10 +271,17 @@ fn update_menu_buttons(
     interaction_query: Query<(Entity, &Interaction), (Changed<Interaction>, With<Button>)>,
     action_state: Query<&ActionState<MenuAction>>,
     //mut assets_handler: asset_loading::AssetsHandler,
-    game_assets: Res<GameAssets>,
     mut audio: GameAudio,
-    mut app_state: ResMut<State<AppState>>,
+    mut assets_handler: asset_loading::AssetsHandler,
+    mut game_assets: ResMut<assets::GameAssets>,
+    mut game_state: ResMut<game_state::GameState>,
+    time: Res<Time>,
 ) {
+    if game_state.title_screen_cooldown > 0.0 {
+        game_state.title_screen_cooldown -= time.delta_seconds();
+        return; 
+    }
+
     let action_state = action_state.single();
     let number_of_buttons = buttons.iter().count();
     let mut pressed_button = action_state.pressed(MenuAction::Select);
@@ -272,22 +302,6 @@ fn update_menu_buttons(
         };
     }
 
-    // mouse
-    for (button_entity, interaction) in interaction_query.iter() {
-        match *interaction {
-            Interaction::Clicked => pressed_button = true,
-            Interaction::Hovered => {
-                *selected_button = buttons
-                    .iter()
-                    .enumerate()
-                    .filter(|(_, x)| *x == button_entity)
-                    .map(|(i, _)| i)
-                    .last()
-                    .unwrap_or(*selected_button)
-            }
-            _ => (),
-        }
-    }
 
     for (i, mut color) in button_colors.iter_mut().enumerate() {
         if i == *selected_button {
@@ -300,7 +314,7 @@ fn update_menu_buttons(
     if pressed_button {
         if *selected_button == 0 {
             audio.play_sfx(&game_assets.blip);
-            app_state.set(AppState::Options).unwrap();
+            assets_handler.load(AppState::LoadWorld, &mut game_assets, &game_state);
         }
         if *selected_button == 1 {
             exit.send(AppExit);

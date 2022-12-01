@@ -24,6 +24,8 @@ mod dust;
 mod cutscene;
 mod game_camera;
 mod game_controller;
+mod follow_text;
+mod fishmonger;
 mod game_state;
 mod game_script;
 mod groups;
@@ -53,20 +55,21 @@ fn main() {
                      )
         .add_plugin(bull::BullPlugin)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default().with_physics_scale(10.0))
-        .add_plugin(RapierDebugRenderPlugin::default())
+//      .add_plugin(RapierDebugRenderPlugin::default())
 //      .add_plugin(LogDiagnosticsPlugin::default())
 //      .add_plugin(FrameTimeDiagnosticsPlugin::default())
 //      .add_plugin(NoCameraPlayerPlugin)
+//      .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(OutlinePlugin)
         .add_plugin(AutoGenerateOutlineNormalsPlugin)
         .add_plugin(billboard::BillboardPlugin)
         .add_plugin(dust::DustPlugin)
         .add_plugin(audio::GameAudioPlugin)
         .add_plugin(cutscene::CutscenePlugin)
-        .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(asset_loading::AssetLoadingPlugin)
         .add_plugin(assets::AssetsPlugin)
         .add_plugin(game_controller::GameControllerPlugin)
+        .add_plugin(follow_text::FollowTextPlugin)
         .add_plugin(game_state::GameStatePlugin)
         .add_plugin(game_script::GameScriptPlugin)
         .add_plugin(groups::GroupPlugin)
@@ -75,11 +78,13 @@ fn main() {
         .add_plugin(player::PlayerPlugin)
         .add_plugin(props::PropsPlugin)
         .add_plugin(score::ScorePlugin)
+        .add_plugin(fishmonger::FishMongerPlugin)
         .add_plugin(shopkeeper::ShopKeeperPlugin)
         .add_plugin(title_screen::TitlePlugin)
         .add_plugin(ui::text_size::TextSizePlugin)
 
         .add_system(debug)
+        .add_system(debug_2)
 //        .add_system(initial_damp_physics)
         .add_startup_system(window_settings)
         .add_state(AppState::Initial)
@@ -116,10 +121,12 @@ fn bootstrap(
     mut game_assets: ResMut<assets::GameAssets>,
     game_state: ResMut<game_state::GameState>,
     mut clear_color: ResMut<ClearColor>,
+    mut audio: audio::GameAudio,
 ) {
+    audio.set_volume();
     clear_color.0 = Color::hex("aaaaaa").unwrap();
 
-    assets_handler.load(AppState::LoadWorld, &mut game_assets, &game_state);
+    assets_handler.load(AppState::TitleScreen, &mut game_assets, &game_state);
 }
 
 pub trait ZeroSignum {
@@ -158,7 +165,7 @@ fn debug(
     parent_transforms: Query<&Transform>,
     assets_gltf: Res<Assets<Gltf>>,
     mut dust_spawn_event_writer: EventWriter<dust::DustSpawnEvent>,
-    mut cutscene_state: ResMut<cutscene::CutsceneState>
+    mut cutscene_state: ResMut<cutscene::CutsceneState>,
 //   mut velocities: Query<(Entity, &mut Velocity), Without<bull::Bull>>,
 ) {
     if keys.just_pressed(KeyCode::Q) {
@@ -263,6 +270,34 @@ fn debug(
         for (entity, _, _) in &cameras {
             commands.entity(entity).insert(FlyCam);
         }
+    }
+}
+
+fn debug_2(
+    keys: Res<Input<KeyCode>>,
+    mut follow_text_event_writer: EventWriter<follow_text::FollowTextEvent>,
+    mut chase_event_writer: EventWriter<fishmonger::ChaseEvent>,
+    mut hit_player_event_writer: EventWriter<player::HitPlayerEvent>,
+    players: Query<Entity, With<player::Player>>,
+) {
+    if keys.just_pressed(KeyCode::H) {
+        for e in &players {
+            follow_text_event_writer.send(follow_text::FollowTextEvent {
+                follow: follow_text::FollowThing::Entity(e),
+                text: "oh geez!".to_string(),
+                color: Color::WHITE,
+                time_to_live: 6.0,
+            });
+        }
+    }
+
+
+    if keys.just_pressed(KeyCode::T) {
+        hit_player_event_writer.send(player::HitPlayerEvent);
+    }
+
+    if keys.just_pressed(KeyCode::Y) {
+        chase_event_writer.send(fishmonger::ChaseEvent);
     }
 }
 

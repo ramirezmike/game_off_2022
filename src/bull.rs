@@ -12,6 +12,7 @@ use crate::{
     player,
     ingame,
     dust,
+    audio::GameAudio,
 };
 
 const TRAUMA_AMOUNT: f32 = 0.5;
@@ -103,6 +104,7 @@ fn handle_collisions(
     mut shakeables: Query<&mut Shake3d>,
     mut dust_spawn_event_writer: EventWriter<dust::DustSpawnEvent>,
     game_assets: Res<GameAssets>,
+    mut audio: GameAudio,
 ) {
     for e in contact_force_events.iter() {
         println!("contact force event {:?}", e.total_force_magnitude);
@@ -127,6 +129,7 @@ fn handle_collisions(
 
                     velocity.linvel = -velocity.linvel;
 
+                    audio.play_sfx(&game_assets.crash_sfx);
                     dust_spawn_event_writer.send(dust::DustSpawnEvent {
                         position: transform.translation + (transform.right() * 5.0),
                         count: 10,
@@ -265,6 +268,7 @@ fn update_bulls(
     mut reset_bull_event_writer: EventWriter<ResetBullEvent>,
     mut dust_spawn_event_writer: EventWriter<dust::DustSpawnEvent>,
     game_assets: Res<GameAssets>,
+    mut audio: GameAudio,
 ) {
     let mut move_events = HashMap::new();
     for move_event in bull_move_event_reader.iter() {
@@ -347,6 +351,7 @@ fn update_bulls(
                 bull.dust_cooldown -= time.delta_seconds();
                 bull.dust_cooldown = bull.dust_cooldown.clamp(0.0, 10.0);
                 if bull.dust_cooldown <= 0.0 {
+                    audio.play_sfx(&game_assets.clop_sfx);
                     dust_spawn_event_writer.send(dust::DustSpawnEvent {
                         position: transform.translation,
                         count: 1,

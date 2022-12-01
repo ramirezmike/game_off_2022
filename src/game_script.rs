@@ -14,6 +14,7 @@ impl Plugin for GameScriptPlugin {
 #[derive(Debug)]
 pub enum GameScript {
     IntroCutscene,
+    EndCutscene,
     PreLevelOneCutscene,
     LevelOneIntroCutscene,
     LevelOne,
@@ -53,7 +54,8 @@ impl GameScriptState {
     pub fn next(&mut self) {
         println!("Moving from {:?}", self.current);
         self.current = match self.current {
-            GameScript::IntroCutscene => GameScript::LevelOneIntroCutscene,
+            GameScript::IntroCutscene => GameScript::PreLevelOneCutscene,
+            GameScript::PreLevelOneCutscene => GameScript::LevelOneIntroCutscene,
             GameScript::LevelOneIntroCutscene => GameScript::LevelOne,
             GameScript::LevelOne => GameScript::LevelOnePostCutscene,
             GameScript::LevelOnePostCutscene => GameScript::LevelTwoIntroCutscene,
@@ -64,7 +66,7 @@ impl GameScriptState {
 
             GameScript::LevelThreeIntroCutscene => GameScript::LevelThree,
             GameScript::LevelThree => GameScript::LevelThreePostCutscene,
-            GameScript::LevelThreePostCutscene => GameScript::LevelFourIntroCutscene,
+            GameScript::LevelThreePostCutscene => GameScript::EndCutscene,
 
             GameScript::LevelFourIntroCutscene => GameScript::LevelFour,
             GameScript::LevelFour => GameScript::LevelFourPostCutscene,
@@ -89,6 +91,8 @@ fn load_state(
     println!("Loading state {:?}", game_script_state.current);
     match game_script_state.current {
         GameScript::IntroCutscene 
+        | GameScript::EndCutscene
+        | GameScript::PreLevelOneCutscene
         | GameScript::LevelOneIntroCutscene 
         | GameScript::LevelOnePostCutscene 
         | GameScript::LevelTwoIntroCutscene 

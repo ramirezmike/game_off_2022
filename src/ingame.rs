@@ -1,6 +1,6 @@
 use crate::{
     asset_loading, assets::GameAssets, cleanup, game_state, AppState, game_camera, player, bull, 
-    DampPhysics, props::*, groups, shopkeeper, billboard, game_script, cutscene, dust,
+    DampPhysics, props::*, groups, shopkeeper, billboard, game_script, cutscene, dust, fishmonger,
 };
 use bevy::prelude::*;
 use bevy::ecs::system::EntityCommands;
@@ -100,6 +100,9 @@ pub fn load(
     assets_handler.add_glb(&mut game_assets.broken_plate, "models/broken_plate.glb");
     assets_handler.add_glb(&mut game_assets.broken_mug, "models/broken_mug.glb");
     assets_handler.add_glb(&mut game_assets.broken_fishbowl, "models/fishbowl_empty.glb");
+    assets_handler.add_glb(&mut game_assets.fishmonger, "models/fishmonger.glb");
+    assets_handler.add_glb(&mut game_assets.fishmonger_with_fish, "models/fishmonger_with_fish.glb");
+    assets_handler.add_animation(&mut game_assets.bull_charge,"models/bull.glb#Animation0");
     assets_handler.add_font(&mut game_assets.font, "fonts/monogram.ttf");
 
     assets_handler.add_standard_mesh(&mut game_assets.dust, Mesh::from(shape::Plane { size: 2.0 }));
@@ -118,11 +121,27 @@ pub fn load(
     assets_handler.add_material(&mut game_assets.pa_lookleft, "textures/pa_lookleft.png", true);
 
     assets_handler.add_glb(&mut game_assets.intro_level, "models/intro.glb");
+    assets_handler.add_glb(&mut game_assets.outro_level, "models/outro.glb");
+    assets_handler.add_glb(&mut game_assets.pregame, "models/pregame.glb");
     assets_handler.add_glb(&mut game_assets.level_one, "models/level_one.glb");
     assets_handler.add_glb(&mut game_assets.level_two, "models/level_two.glb");
     assets_handler.add_glb(&mut game_assets.level_three, "models/level_three.glb");
-    assets_handler.add_glb(&mut game_assets.level_four, "models/level_four.glb");
-    assets_handler.add_glb(&mut game_assets.level_five, "models/level_five.glb");
+//  assets_handler.add_glb(&mut game_assets.level_four, "models/level_four.glb");
+//  assets_handler.add_glb(&mut game_assets.level_five, "models/level_five.glb");
+
+    assets_handler.add_audio(&mut game_assets.mat_speak, "audio/mat_speak.wav");
+    assets_handler.add_audio(&mut game_assets.pa_speak, "audio/pa_speak.wav");
+    assets_handler.add_audio(&mut game_assets.clop_sfx, "audio/clop.wav");
+    assets_handler.add_audio(&mut game_assets.break_sfx, "audio/break.wav");
+    assets_handler.add_audio(&mut game_assets.crash_sfx, "audio/crash.wav");
+    assets_handler.add_audio(&mut game_assets.intro_bgm, "audio/intro.ogg");
+    assets_handler.add_audio(&mut game_assets.intro_end_bgm, "audio/intro_end.ogg");
+    assets_handler.add_audio(&mut game_assets.pregame_bgm, "audio/pregame_bgm.ogg");
+    assets_handler.add_audio(&mut game_assets.intro_end_bgm, "audio/intro_end_bgm.ogg");
+    assets_handler.add_audio(&mut game_assets.level_one_bgm, "audio/level_one_bgm.ogg");
+    assets_handler.add_audio(&mut game_assets.level_two_bgm, "audio/level_two_bgm.ogg");
+    assets_handler.add_audio(&mut game_assets.level_three_bgm, "audio/level_three_bgm.ogg");
+    assets_handler.add_audio(&mut game_assets.title_screen_bgm, "audio/title_screen_bgm.ogg");
 }
 
 #[derive(Component)]
@@ -137,16 +156,19 @@ pub fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut camera: Query<&mut Transform, With<game_camera::PanOrbitCamera>>,
     mut rapier: ResMut<RapierConfiguration>,
+    mut clear_color: ResMut<ClearColor>,
     game_script_state: Res<game_script::GameScriptState>,
 ) {
-    println!("Called SETUP");
+    clear_color.0 = Color::hex("000000").unwrap(); 
     game_state.title_screen_cooldown = 1.0;
-    game_state.current_time = 1120.0;
+    game_state.current_time = 90.0;
     game_state.live_score = 1.0;
 
     let gltf = 
         match game_script_state.current {
             game_script::GameScript::IntroCutscene => assets_gltf.get(&game_assets.intro_level.clone()),
+            game_script::GameScript::EndCutscene => assets_gltf.get(&game_assets.outro_level.clone()),
+            game_script::GameScript::PreLevelOneCutscene => assets_gltf.get(&game_assets.pregame.clone()),
             game_script::GameScript::LevelOneIntroCutscene 
                 | game_script::GameScript::LevelOnePostCutscene 
                 | game_script::GameScript::LevelOne => assets_gltf.get(&game_assets.level_one.clone()),
@@ -174,6 +196,7 @@ pub fn setup(
 //                   println!("Name: {} Mesh: {:?}", name, mesh.is_some());
 
                    shopkeeper::spawn(name, cmds);
+                   fishmonger::spawn(name, cmds);
 
                    if name.contains("static") {
                        if let Some(mesh) = mesh {
@@ -288,6 +311,22 @@ pub fn setup(
                    if name.contains("collide") {
                        cmds.insert((BullCollide, ExternalImpulse::default(), ExternalForce::default()));
                    }
+
+                   if name.contains("Tran") {
+                       let split_by_tran = name.split("Tran")
+                                           .collect::<Vec::<_>>();
+                       let transform_info = split_by_tran.last()
+                                               .expect("Tran missing entries");
+                       let transform_info = transform_info.split("_").collect::<Vec::<_>>();
+                       let x = f32::from_str(transform_info[0]).expect("Transform missing X");
+                       let z = f32::from_str(transform_info[1]).expect("Transform missing Z");
+                       let mut t = Transform::from_xyz(x, 0.0, z);
+                       if !name.contains("player") && !name.contains("bull") {
+                           t.rotate_y(TAU / 2.0);
+                       }
+                       cmds.insert(t);
+                   }
+
                    if name.contains("Group") {
                        let split_by_group = name.split("Group")
                                                 .collect::<Vec::<_>>();
@@ -329,6 +368,14 @@ pub fn setup(
                 commands.insert_resource(AmbientLight {
                     color: Color::WHITE,
                     brightness: 0.00,
+                });
+            },
+            game_script::GameScript::PreLevelOneCutscene |
+            game_script::GameScript::EndCutscene 
+                => {
+                commands.insert_resource(AmbientLight {
+                    color: Color::WHITE,
+                    brightness: 0.50,
                 });
             },
             game_script::GameScript::LevelTwo => {
@@ -461,6 +508,17 @@ fn handle_lights(
                 intensity: 100000.0,
                 range: 60.6,
                 radius: 12.2,
+                shadows_enabled: true,
+                ..default()
+            });
+    }
+    if name.contains("Jail") {
+        entity_commands
+            .insert(PointLight {
+                color: Color::rgb(1.00, 1.0, 1.0),
+                intensity: 2274.0,
+                range: 12.5,
+                radius: 0.0,
                 shadows_enabled: true,
                 ..default()
             });

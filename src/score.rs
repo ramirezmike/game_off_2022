@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use crate::{
     AppState, groups, game_state, asset_loading, game_script, assets, cutscene,
+    follow_text, player,
 };
 use std::collections::HashMap;
 
@@ -12,9 +13,9 @@ impl Plugin for ScorePlugin {
            .with_system(track_round_time)
            .with_system(check_score)
         );
-
     }
 }
+
 
 fn track_round_time(
     mut game_state: ResMut<game_state::GameState>,
@@ -23,14 +24,45 @@ fn track_round_time(
     mut game_script_state: ResMut<game_script::GameScriptState>,
     mut assets_handler: asset_loading::AssetsHandler,
     mut game_assets: ResMut<assets::GameAssets>,
+    mut cooldown: Local<f32>,
+    mut follow_text_event_writer: EventWriter<follow_text::FollowTextEvent>,
+    players: Query<Entity, With<player::Player>>,
 ) {
-    game_state.current_time -= time.delta_seconds();
-    
-    if game_state.current_time < 0.0 || game_state.live_score <= 0.0 {
-        cutscene_state.cutscene_index = 0;
-        game_script_state.next();
-        assets_handler.load(AppState::Cutscene, &mut game_assets, &game_state);
+    if game_state.level_ended {
+        game_state.level_end_cooldown -= time.delta_seconds();
+        if game_state.level_end_cooldown <= 0.0 {
+            game_state.level_ended = false;
+            cutscene_state.cutscene_index = 0;
+            game_script_state.next();
+            assets_handler.load(AppState::Cutscene, &mut game_assets, &game_state);
+        }
+    } else {
+        game_state.current_time -= time.delta_seconds();
+
+        if game_state.current_time < 0.0 || game_state.live_score <= 0.0 {
+            game_state.level_ended = true;
+            game_state.level_end_cooldown = 3.0;
+
+            for e in &players {
+                if game_state.live_score <= 0.0 {
+                    follow_text_event_writer.send(follow_text::FollowTextEvent {
+                        follow: follow_text::FollowThing::Entity(e),
+                        text: "everything is destroyed!".to_string(),
+                        color: Color::WHITE,
+                        time_to_live: 6.0,
+                    });
+                } else {
+                    follow_text_event_writer.send(follow_text::FollowTextEvent {
+                        follow: follow_text::FollowThing::Entity(e),
+                        text: "oh geez the cops are here!".to_string(),
+                        color: Color::WHITE,
+                        time_to_live: 6.0,
+                    });
+                }
+            }
+        }
     }
+    
 }
 
 fn check_score(

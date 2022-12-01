@@ -19,14 +19,18 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugin(InputManagerPlugin::<PlayerAction>::default())
             .add_event::<PlayerMoveEvent>()
+            .add_event::<HitPlayerEvent>()
             .add_system_set(
                 SystemSet::on_update(AppState::InGame)
                     .with_system(handle_controllers.before(handle_input))
                     .with_system(handle_input)
+                    .with_system(handle_hit_player_event)
                     .with_system(move_player.after(handle_input)),
             );
     }
 }
+
+pub struct HitPlayerEvent;
 
 #[derive(Component, Reflect, Default)]
 #[reflect(Component)]
@@ -38,6 +42,7 @@ pub struct Player {
     pub current_animation: Handle<AnimationClip>,
     pub state: PlayerState,
     pub dive_cooldown: f32,
+    pub hit_cooldown: f32,
 }
 
 impl Player {
@@ -52,6 +57,7 @@ impl Player {
             current_animation: Handle::<AnimationClip>::default(),
             state: PlayerState::Normal,
             dive_cooldown: 0.0,
+            hit_cooldown: 0.0,
         }
     }
 }
@@ -66,6 +72,26 @@ pub enum PlayerState {
 impl Default for PlayerState {
     fn default() -> PlayerState {
         PlayerState::Normal
+    }
+}
+
+pub fn handle_hit_player_event(
+    mut hit_player_event_reader: EventReader<HitPlayerEvent>,
+    mut animations: Query<&mut AnimationPlayer>,
+    game_assets: ResMut<GameAssets>,
+    mut players: Query<(Entity, &mut Player)>,
+) {
+    for _ in hit_player_event_reader.iter() {
+        println!("hit player event!");
+        for (entity, mut player) in &mut players {
+            let mut animation = animations.get_mut(entity).unwrap();
+            if player.current_animation != game_assets.matador_dive {
+                animation.play(game_assets.matador_dive.clone_weak());
+                player.current_animation = game_assets.matador_dive.clone_weak();
+                animation.set_speed(5.25);
+            }
+            player.hit_cooldown = 3.0;
+        }
     }
 }
 
@@ -85,6 +111,12 @@ pub fn move_player(
     }
 
     for (entity, mut transform, mut player, mut velocity) in players.iter_mut() {
+        player.hit_cooldown -= time.delta_seconds();
+        player.hit_cooldown = player.hit_cooldown.clamp(0.0, 10.0);
+        if player.hit_cooldown > 0.0 {
+            continue;
+        }
+
         let speed: f32 = match player.state {
                              PlayerState::Normal => player.speed,
                              PlayerState::Charging => player.speed * 0.25,

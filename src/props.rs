@@ -7,6 +7,8 @@ use crate::{
     game_state,
     AppState,
     ingame,
+    fishmonger,
+    audio::GameAudio,
 };
 use bevy::gltf::Gltf;
 use bevy_scene_hook::{SceneHook, HookedSceneBundle};
@@ -175,6 +177,7 @@ impl ComponentAdder for BrokenFishBowl {
             .insert(BrokenFishBowl)
             .insert(ingame::CleanupMarker);
         add_dynamic_rapier_components_for_props(entity_commands);
+        entity_commands.insert(ColliderMassProperties::Density(0.0001));
     }
 }
 
@@ -194,6 +197,8 @@ fn handle_breakables(
     assets_gltf: Res<Assets<Gltf>>,
     game_assets: Res<assets::GameAssets>,
     mut break_event_writer: EventWriter<BreakEvent>,
+    mut chase_event_writer: EventWriter<fishmonger::ChaseEvent>,
+    mut audio: GameAudio,
 ) {
     for e in contact_force_events.iter() {
 //        println!("contact force event {:?}", e.total_force_magnitude);
@@ -201,6 +206,7 @@ fn handle_breakables(
             .for_each(|entity| {
                 if let Ok((breakable, transform, velocity)) = breakables.get(*entity) {
                     break_event_writer.send(BreakEvent);
+                    audio.play_sfx(&game_assets.break_sfx);
 
                     let mut entity_commands = commands.entity(*entity);
                     remove_dynamic_rapier_components_for_props(&mut entity_commands);
@@ -212,8 +218,11 @@ fn handle_breakables(
                                            Box::new(BrokenPlate::add_components) as Box<dyn Fn(&mut EntityCommands, Option::<&Mesh>) + Send + Sync>),
                         BreakableType::Mug => (&game_assets.broken_mug, "mug", 
                                            Box::new(BrokenMug::add_components) as Box<dyn Fn(&mut EntityCommands, Option::<&Mesh>) + Send + Sync>),
-                        BreakableType::FishBowl => (&game_assets.broken_fishbowl, "bowl", 
-                                           Box::new(BrokenFishBowl::add_components) as Box<dyn Fn(&mut EntityCommands, Option::<&Mesh>) + Send + Sync>),
+                        BreakableType::FishBowl => {
+                            chase_event_writer.send(fishmonger::ChaseEvent);
+                            (&game_assets.broken_fishbowl, "bowl", 
+                               Box::new(BrokenFishBowl::add_components) as Box<dyn Fn(&mut EntityCommands, Option::<&Mesh>) + Send + Sync>)
+                        },
                     };
 
                     if let Some(gltf) = assets_gltf.get(asset) {
