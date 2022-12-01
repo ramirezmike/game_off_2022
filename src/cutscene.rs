@@ -641,7 +641,7 @@ fn play_cutscene(
                 },
                 3 => {
                     textbox.queued_text = Some(TextBoxText {
-                        text: "PA: Just destroy everything.".to_string(),
+                        text: "PA: Just destroy all their antiques.".to_string(),
                         speed: text_speed,
                         auto: false,
                         speaking: DisplayCharacter::Pa,
@@ -651,13 +651,47 @@ fn play_cutscene(
                     cutscene_texture_state.mat = vec!(CutsceneTexture::MatIdle, 
                                                      CutsceneTexture::MatTalk);
                     textbox.queued_text = Some(TextBoxText {
-                        text: "MAT: How come I can hear you right now?".to_string(),
+                        text: "MAT: I'm not sure I should do this...".to_string(),
                         speed: text_speed,
                         auto: false,
                         speaking: DisplayCharacter::Mat,
                     });
                 },
                 5 => {
+                    textbox.queued_text = Some(TextBoxText {
+                        text: "PA: That's the beauty, kid! You're not doing it, your bull is!".to_string(),
+                        speed: text_speed,
+                        auto: false,
+                        speaking: DisplayCharacter::Pa,
+                    });
+                },
+                6 => {
+                    textbox.queued_text = Some(TextBoxText {
+                        text: "PA: It's 100% legal!".to_string(),
+                        speed: text_speed,
+                        auto: false,
+                        speaking: DisplayCharacter::Pa,
+                    });
+                },
+                7 => {
+                    textbox.queued_text = Some(TextBoxText {
+                        text: "PA: Anymore questions?".to_string(),
+                        speed: text_speed,
+                        auto: false,
+                        speaking: DisplayCharacter::Pa,
+                    });
+                },
+                8 => {
+                    cutscene_texture_state.mat = vec!(CutsceneTexture::MatIdle, 
+                                                     CutsceneTexture::MatTalk);
+                    textbox.queued_text = Some(TextBoxText {
+                        text: "MAT: How come I can hear you right now?".to_string(),
+                        speed: text_speed,
+                        auto: false,
+                        speaking: DisplayCharacter::Mat,
+                    });
+                },
+                9 => {
                     cutscene_texture_state.mat = vec!(CutsceneTexture::MatIdle); 
                     textbox.queued_text = Some(TextBoxText {
                         text: "PA: I gave you that earpiece, remember?".to_string(),
@@ -666,7 +700,7 @@ fn play_cutscene(
                         speaking: DisplayCharacter::Pa,
                     });
                 },
-                6 => {
+                10 => {
                     cutscene_texture_state.mat = vec!(CutsceneTexture::MatIdle, 
                                                      CutsceneTexture::MatTalk);
                     textbox.queued_text = Some(TextBoxText {
@@ -676,7 +710,7 @@ fn play_cutscene(
                         speaking: DisplayCharacter::Mat,
                     });
                 },
-                7 => {
+                11 => {
                     cutscene_texture_state.mat = vec!(CutsceneTexture::MatIdle); 
                     textbox.queued_text = Some(TextBoxText {
                         text: "PA: Nevermind that! You're almost at the first shop.".to_string(),
@@ -685,7 +719,7 @@ fn play_cutscene(
                         speaking: DisplayCharacter::Pa,
                     });
                 },
-                8 => {
+                12 => {
                     cutscene_texture_state.mat = vec!(CutsceneTexture::MatIdle); 
                     textbox.queued_text = Some(TextBoxText {
                         text: "PA: Remember, the best offensive is to be offensive!".to_string(),
@@ -836,7 +870,7 @@ fn play_cutscene(
                 },
                 9 => {
                     textbox.queued_text = Some(TextBoxText {
-                        text: "PA: Then try to get it to knock everything down before time runs out!".to_string(),
+                        text: "PA: Then try to get it to knock all the antiques to the ground before time runs out!".to_string(),
                         speed: text_speed,
                         auto: false,
                         speaking: DisplayCharacter::Pa,
@@ -852,7 +886,7 @@ fn play_cutscene(
                 },
                 11 => {
                     textbox.queued_text = Some(TextBoxText {
-                        text: "MAT: Yeah, Pa, I trained the bull. I know how bulls work.".to_string(),
+                        text: "MAT: Yeah, Pa, thanks for explaining how to use my bull.".to_string(),
                         speed: text_speed,
                         auto: false,
                         speaking: DisplayCharacter::Mat,
@@ -860,7 +894,15 @@ fn play_cutscene(
                 },
                 12 => {
                     textbox.queued_text = Some(TextBoxText {
-                        text: "Pa: Alright, GO!".to_string(),
+                        text: "MAT: I almost forgot I spent all my life training it.".to_string(),
+                        speed: text_speed,
+                        auto: false,
+                        speaking: DisplayCharacter::Mat,
+                    });
+                },
+                13 => {
+                    textbox.queued_text = Some(TextBoxText {
+                        text: "Pa: No problem, kid, now GO!".to_string(),
                         speed: text_speed,
                         auto: false,
                         speaking: DisplayCharacter::Pa,
@@ -1597,14 +1639,57 @@ fn play_cutscene(
                     });
                 },
                 2 => {
+                    cutscene_texture_state.mat = vec!(CutsceneTexture::MatIdle, 
+                                                     CutsceneTexture::MatTalk);
+                    cutscene_texture_state.pa = vec!(CutsceneTexture::PaIdle); 
+                    textbox.queued_text = Some(TextBoxText {
+                        text: "MAT: I'm just surprised they sent all three of us to jail.".to_string(),
+                        speed: text_speed,
+                        auto: false,
+                        speaking: DisplayCharacter::Mat,
+                    });
+                },
+                3 => {
                     cutscene_texture_state.mat = vec!(CutsceneTexture::MatIdle);
                     cutscene_texture_state.pa = vec!(CutsceneTexture::PaIdle, 
                                                      CutsceneTexture::PaTalk);
                     textbox.queued_text = Some(TextBoxText {
-                        text: "PA: who would have known".to_string(),
+                        text: "PA: Yeah, I guess it's true what they say...".to_string(),
                         speed: text_speed,
                         auto: false,
                         speaking: DisplayCharacter::Pa,
+                    });
+                },
+                4 => {
+                    cutscene_texture_state.mat = vec!(CutsceneTexture::MatIdle);
+                    cutscene_texture_state.pa = vec!(CutsceneTexture::PaIdle, 
+                                                     CutsceneTexture::PaTalk);
+                    textbox.queued_text = Some(TextBoxText {
+                        text: "PA: There's no 'I' in 'Guilty'.".to_string(),
+                        speed: text_speed,
+                        auto: false,
+                        speaking: DisplayCharacter::Pa,
+                    });
+                },
+                5 => {
+                    cutscene_texture_state.mat = vec!(CutsceneTexture::MatIdle);
+                    cutscene_texture_state.pa = vec!(CutsceneTexture::PaIdle);
+                    textbox.queued_text = Some(TextBoxText {
+                        text: "MAT: ...".to_string(),
+                        speed: text_speed,
+                        auto: false,
+                        speaking: DisplayCharacter::None,
+                    });
+                },
+                6 => {
+                    cutscene_texture_state.mat = vec!(CutsceneTexture::MatIdle, 
+                                                     CutsceneTexture::MatTalk);
+                    cutscene_texture_state.pa = vec!(CutsceneTexture::PaLook); 
+                    textbox.queued_text = Some(TextBoxText {
+                        text: "MAT: Please stop.".to_string(),
+                        speed: text_speed,
+                        auto: false,
+                        speaking: DisplayCharacter::Mat,
                     });
                 },
                 _ => {

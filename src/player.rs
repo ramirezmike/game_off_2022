@@ -330,36 +330,38 @@ impl PlayerBundle {
         input_map.set_gamepad(Gamepad { id: 0 });
 
         // Movement
-//        input_map.insert(KeyCode::Up, Up);
+        input_map.insert(KeyCode::Up, Up);
         input_map.insert(KeyCode::W, Up);
         input_map.insert(KeyCode::Z, Up);
         input_map.insert(GamepadButtonType::DPadUp, Up);
 
-//        input_map.insert(KeyCode::Down, Down);
+        input_map.insert(KeyCode::Down, Down);
         input_map.insert(KeyCode::S, Down);
         input_map.insert(GamepadButtonType::DPadDown, Down);
 
-//        input_map.insert(KeyCode::Left, Left);
+        input_map.insert(KeyCode::Left, Left);
         input_map.insert(KeyCode::A, Left);
         input_map.insert(KeyCode::Q, Left);
         input_map.insert(GamepadButtonType::DPadLeft, Left);
 
-//        input_map.insert(KeyCode::Right, Right);
+        input_map.insert(KeyCode::Right, Right);
         input_map.insert(KeyCode::D, Right);
         input_map.insert(GamepadButtonType::DPadRight, Right);
 
         // Actions
-        input_map.insert(KeyCode::I, ActionUp);
-        input_map.insert(GamepadButtonType::North, ActionUp);
+        input_map.insert(KeyCode::I, ActionRight);
+        input_map.insert(GamepadButtonType::North, ActionRight);
 
-        input_map.insert(KeyCode::K, ActionDown);
-        input_map.insert(GamepadButtonType::South, ActionDown);
+        input_map.insert(KeyCode::K, ActionRight);
+        input_map.insert(GamepadButtonType::South, ActionRight);
 
-        input_map.insert(KeyCode::J, ActionLeft);
-        input_map.insert(GamepadButtonType::West, ActionLeft);
+        input_map.insert(KeyCode::J, ActionRight);
+        input_map.insert(GamepadButtonType::West, ActionRight);
 
         input_map.insert(KeyCode::L, ActionRight);
         input_map.insert(GamepadButtonType::East, ActionRight);
+        input_map.insert(KeyCode::Return, ActionRight);
+        input_map.insert(KeyCode::Space, ActionRight);
 
         input_map
     }
@@ -465,19 +467,6 @@ fn handle_input(
 
         if action_state.just_pressed(PlayerAction::ActionUp) {}
         if action_state.pressed(PlayerAction::ActionUp) {}
-
-        if action_state.just_pressed(PlayerAction::ActionDown) && player.state != PlayerState::Diving {
-            player.state = PlayerState::Diving;
-            velocity.linvel = velocity.linvel.normalize();
-            player.dive_cooldown = 2.0;
-            //audio.play_sfx(&game_assets.dive);
-        }
-
-        if action_state.pressed(PlayerAction::ActionDown) {}
-
-        if action_state.just_pressed(PlayerAction::ActionLeft) {}
-
-        if action_state.pressed(PlayerAction::ActionLeft) {}
 
         if action_state.just_pressed(PlayerAction::ActionRight) {
             bull_charge_event_writer.send(bull::BullChargeEvent { charging: true });

@@ -83,8 +83,8 @@ fn main() {
         .add_plugin(title_screen::TitlePlugin)
         .add_plugin(ui::text_size::TextSizePlugin)
 
-        .add_system(debug)
-        .add_system(debug_2)
+//      .add_system(debug)
+//      .add_system(debug_2)
 //        .add_system(initial_damp_physics)
         .add_startup_system(window_settings)
         .add_state(AppState::Initial)

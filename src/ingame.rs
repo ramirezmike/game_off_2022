@@ -378,6 +378,12 @@ pub fn setup(
                     brightness: 0.50,
                 });
             },
+            game_script::GameScript::LevelThree => {
+                commands.insert_resource(AmbientLight {
+                    color: Color::WHITE,
+                    brightness: 0.50,
+                });
+            },
             game_script::GameScript::LevelTwo => {
                 commands.insert_resource(AmbientLight {
                     color: Color::WHITE,
@@ -519,6 +525,16 @@ fn handle_lights(
                 intensity: 2274.0,
                 range: 12.5,
                 radius: 0.0,
+                shadows_enabled: true,
+                ..default()
+            });
+    }
+
+    if name.contains("Fish") {
+        entity_commands
+            .insert(PointLight {
+                color: Color::rgb(0.00, 0.474, 0.78),
+                intensity: 2274.0,
                 shadows_enabled: true,
                 ..default()
             });
