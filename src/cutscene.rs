@@ -1,7 +1,7 @@
 use crate::{
     assets::GameAssets, cleanup, game_state, menus, AppState, ui::text_size, ingame, 
     game_camera, ingame_ui, asset_loading, title_screen::MenuAction, audio::GameAudio,
-    game_script, player, bull,
+    game_script, player, bull, 
 };
 use std::mem;
 use bevy::prelude::*;
@@ -111,7 +111,8 @@ fn setup_cutscene(
                                 overflow: Overflow::Hidden,
                                 ..Default::default()
                             },
-                            background_color: Color::hex("8d99ae").unwrap().into(),
+//                            background_color: Color::hex("8d99ae").unwrap().into(),
+                            background_color: Color::BLACK.into(),
                             ..Default::default()
                         })
                         .insert(CutsceneTextContainerMarker);
@@ -213,6 +214,7 @@ fn display_textbox(
     text_scaler: text_size::TextScaler,
     time: Res<Time>,
     mut audio: GameAudio,
+    mut cutscene_state: ResMut<CutsceneState>,
 ) {
     textbox.cooldown -= time.delta_seconds();     
     textbox.cooldown = textbox.cooldown.clamp(-3.0, 3.0);
@@ -235,6 +237,16 @@ fn display_textbox(
 
             let base_font_size = 50.0;
             let font_size = text_scaler.scale(base_font_size);
+            let background_color = 
+                if text_to_display.contains("PA:") {
+                    Color::hex("588157").unwrap()
+                } else if text_to_display.contains("MAT:") {
+                    Color::hex("e9c46a").unwrap()
+                } else if text_to_display.contains("Shopkeeper:") {
+                    Color::hex("e07a5f").unwrap()
+                } else {
+                    Color::NONE
+                };
             commands.entity(container)
                     .with_children(|parent| {
                         parent.spawn(TextBundle {
@@ -254,12 +266,20 @@ fn display_textbox(
                                 }
                             ),
                             ..Default::default()
-                        });
+                        })
+                        .insert(BackgroundColor(background_color));
                     });
-            match current_text.speaking {
-                DisplayCharacter::Mat => audio.play_talk(&game_assets.mat_speak),
-                DisplayCharacter::Pa => audio.play_talk(&game_assets.pa_speak),
-                _ => ()
+
+            if text_to_display.contains("b-") {
+                audio.play_talk(&game_assets.blip);
+                cutscene_state.waiting_on_input = false;
+                cutscene_state.cutscene_index += 1; 
+            } else {
+                match current_text.speaking {
+                    DisplayCharacter::Mat => audio.play_talk(&game_assets.mat_speak),
+                    DisplayCharacter::Pa => audio.play_talk(&game_assets.pa_speak),
+                    _ => ()
+                }
             }
 
             current_speed = Some(current_text.speed);
@@ -372,6 +392,7 @@ fn handle_input(
 }
 
 fn play_cutscene(
+    mut commands: Commands,
     mut cutscene_state: ResMut<CutsceneState>,
     mut camera: Query<&mut Transform, With<game_camera::PanOrbitCamera>>,
     mut textbox: ResMut<TextBox>,
@@ -381,6 +402,7 @@ fn play_cutscene(
     mut game_script_state: ResMut<game_script::GameScriptState>,
     mut cutscene_texture_state: ResMut<CutsceneTextureState>,
     mut animations: Query<&mut AnimationPlayer>,
+    pointlights: Query<Entity, With<PointLight>>,
     players: Query<Entity, With<player::Player>>,
     bulls: Query<Entity, With<bull::Bull>>,
 //    mut ingame_ui_textbox: ResMut<ingame_ui::TextBox>,
@@ -406,6 +428,7 @@ fn play_cutscene(
                     cutscene_state.camera_speed = 1.0; 
                     audio.stop_bgm();
                     audio.play_bgm(&game_assets.intro_bgm);
+                    audio.play_sfx_repeat(&game_assets.fire_sfx);
                     cutscene_state.target_camera_translation = Some(Vec3::new(18.70001, 1.6389314, 20.061293));
                     cutscene_state.target_camera_rotation = Some(Quat::from_axis_angle(Vec3::new(-0.07476175, -0.98985404, -0.12082917), 2.0425286));
 //                  cutscene_texture_state.pa = vec!(CutsceneTexture::PaIdle, 
@@ -585,6 +608,8 @@ fn play_cutscene(
                     cutscene_state.target_camera_translation = None;
                     cutscene_state.target_camera_rotation = None;
                     cutscene_state.cutscene_index = 0;
+                    audio.stop_bgm();
+                    audio.stop_sfx();
                     game_script_state.next();
                     cutscene_state.waiting_on_input = false;
                     assets_handler.load(AppState::LoadWorld, &mut game_assets, &game_state);
@@ -596,7 +621,7 @@ fn play_cutscene(
                 0 => {
                     cutscene_state.target_camera_translation = None;
                     cutscene_state.target_camera_rotation = None;
-                    camera.translation = Vec3::new(6.8157444, 2.6143255, -2.526128);
+                    camera.translation = Vec3::new(6.8157444, 30.6143255, -2.526128);
                     camera.rotation = Quat::from_axis_angle(Vec3::new(-0.051877804, 0.9947759, 0.08791898), 2.080009);
                     audio.stop_bgm();
                     audio.play_bgm(&game_assets.pregame_bgm);
@@ -623,6 +648,8 @@ fn play_cutscene(
                         animation.set_speed(3.0);
                         animation.resume();
                     }
+
+                    cutscene_state.target_camera_translation = Some(Vec3::new(6.8157444, 2.0143255, -2.526128));
 
                     textbox.queued_text = Some(TextBoxText {
                         text: "PA: You and your bull go to each antique shop in town.".to_string(),
@@ -902,7 +929,7 @@ fn play_cutscene(
                 },
                 13 => {
                     textbox.queued_text = Some(TextBoxText {
-                        text: "Pa: No problem, kid, now GO!".to_string(),
+                        text: "PA: No problem, kid, now GO!".to_string(),
                         speed: text_speed,
                         auto: false,
                         speaking: DisplayCharacter::Pa,
@@ -1377,10 +1404,17 @@ fn play_cutscene(
                         animation.set_speed(2.0);
                         animation.resume();
                     }
-                    camera.translation = Vec3::new(17.168844, 1.5, -0.0074485363);
-                    camera.rotation = Quat::from_axis_angle(Vec3::new(-0.03418233, -0.9987495, -0.03648749), 1.5735247);
+                    camera.translation = Vec3::new(4.868683, 1.422154, -0.04496868);
+                    camera.rotation = Quat::from_axis_angle(Vec3::new(0.018233472, 0.9996569, 0.018801434), 4.681377);
                     cutscene_state.target_camera_translation = None;
                     cutscene_state.target_camera_rotation = None;
+                    for e in &pointlights {
+                        commands.entity(e).insert(ingame::FishLight {
+                            is_siren: true,
+                            is_blue: true,
+                            cooldown: 1.0,
+                        });
+                    }
                     textbox.queued_text = Some(TextBoxText {
                         text: "Shopkeeper: Over here, officer!!".to_string(),
                         speed: text_speed,
@@ -1389,6 +1423,13 @@ fn play_cutscene(
                     });
                 },
                 1 => {
+                    for e in &pointlights {
+                        commands.entity(e).insert(ingame::FishLight {
+                            is_siren: true,
+                            is_blue: true,
+                            cooldown: 1.0,
+                        });
+                    }
                     for entity in &players {
                         let mut animation = animations.get_mut(entity).unwrap();
                         animation.play(game_assets.matador_idle.clone_weak()).repeat();
@@ -1403,7 +1444,7 @@ fn play_cutscene(
                     camera.translation = Vec3::new(-10.231776, 1.5, -0.55118924);
                     camera.rotation = Quat::from_axis_angle(Vec3::new(-0.05911547, 0.9965279, 0.0586311), 1.5660472);
                     textbox.queued_text = Some(TextBoxText {
-                        text: "MAT: Oh geez! The cops caught up to us!".to_string(),
+                        text: "MAT: Ahhh! The cops caught up to us!".to_string(),
                         speed: text_speed,
                         auto: false,
                         speaking: DisplayCharacter::Mat,
@@ -1475,7 +1516,7 @@ fn play_cutscene(
                     camera.translation = Vec3::new(-10.231776, 1.5, -0.55118924);
                     camera.rotation = Quat::from_axis_angle(Vec3::new(-0.05911547, 0.9965279, 0.0586311), 1.5660472);
                     textbox.queued_text = Some(TextBoxText {
-                        text: "PA: What a load of b".to_string(),
+                        text: "PA: What a load of b-".to_string(),
                         speed: text_speed,
                         auto: true,
                         speaking: DisplayCharacter::Pa,

@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy::ecs::system::EntityCommands;
 use bevy::gltf::Gltf;
 use crate::{
-    AppState, assets::GameAssets, game_state, groups, ZeroSignum, dust, score, player,
+    AppState, assets::GameAssets, game_state, groups, ZeroSignum, dust, score, player, follow_text,
 };
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -212,10 +212,17 @@ pub struct ChaseEvent;
 fn handle_chase_event(
     mut chase_event_reader: EventReader<ChaseEvent>,
     mut fishmongers: Query<(Entity, &mut FishMonger)>,
+    mut follow_text_event_writer: EventWriter<follow_text::FollowTextEvent>,
 ) {
     for _ in chase_event_reader.iter() {
-        for (_, mut monger) in &mut fishmongers {
+        for (entity, mut monger) in &mut fishmongers {
             monger.state = FishMongerState::Chasing;
+            follow_text_event_writer.send(follow_text::FollowTextEvent {
+                follow: follow_text::FollowThing::Entity(entity),
+                text: "YOU MONSTER!".to_string(),
+                color: Color::WHITE,
+                time_to_live: 6.0,
+            });
         }
     }
 }

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy::ecs::system::EntityCommands;
 use crate::{
-    AppState, assets::GameAssets, game_state, groups, ZeroSignum, dust, score,
+    AppState, assets::GameAssets, game_state, groups, ZeroSignum, dust, score, follow_text,
 };
 use std::collections::HashMap;
 
@@ -192,8 +192,9 @@ fn think_shopkeepers(
     mut shopkeepers: Query<(Entity, &mut ShopKeeper)>,
     time: Res<Time>,
     group_members: Query<(&groups::GroupMember, &Transform, &GlobalTransform)>,
+    mut follow_text_event_writer: EventWriter<follow_text::FollowTextEvent>,
 ) {
-    for (_, mut keeper) in &mut shopkeepers {
+    for (entity, mut keeper) in &mut shopkeepers {
 // this makes keeper check constantly
 //        if keeper.target.is_some() && keeper.target.unwrap().0 != 0 { continue; } 
         if keeper.target.is_some() { continue; }
@@ -219,6 +220,12 @@ fn think_shopkeepers(
                     if distance > score::BREAK_DISTANCE {
                         println!("setting target! {}", target);
                         keeper.target = Some((*group_id, target.clone()));
+                        follow_text_event_writer.send(follow_text::FollowTextEvent {
+                            follow: follow_text::FollowThing::Entity(entity),
+                            text: "I can fix that!".to_string(),
+                            color: Color::WHITE,
+                            time_to_live: 6.0,
+                        });
                         break 'outer;
                     }
                 }

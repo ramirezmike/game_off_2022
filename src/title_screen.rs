@@ -47,6 +47,7 @@ impl MenuAction {
 
         input_map.insert(KeyCode::Up, Up);
         input_map.insert(KeyCode::W, Up);
+        input_map.insert(KeyCode::Z, Up);
         input_map.insert(GamepadButtonType::DPadUp, Up);
 
         input_map.insert(KeyCode::Down, Down);
@@ -55,6 +56,7 @@ impl MenuAction {
 
         input_map.insert(KeyCode::Left, Left);
         input_map.insert(KeyCode::A, Left);
+        input_map.insert(KeyCode::Q, Left);
         input_map.insert(GamepadButtonType::DPadLeft, Left);
 
         input_map.insert(KeyCode::Right, Right);
@@ -63,6 +65,7 @@ impl MenuAction {
 
 //        input_map.insert(KeyCode::Space, Select);
         input_map.insert(KeyCode::Return, Select);
+        input_map.insert(KeyCode::Space, Select);
         input_map.insert(GamepadButtonType::South, Select);
 
         input_map

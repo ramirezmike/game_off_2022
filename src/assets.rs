@@ -44,6 +44,7 @@ pub struct GameAssets {
     pub break_sfx: Handle<AudioSource>,
     pub clop_sfx: Handle<AudioSource>,
     pub fix_sfx: Handle<AudioSource>,
+    pub fire_sfx: Handle<AudioSource>,
     pub intro_bgm: Handle<AudioSource>,
     pub pregame_bgm: Handle<AudioSource>,
     pub intro_end_bgm: Handle<AudioSource>,

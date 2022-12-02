@@ -34,6 +34,7 @@ mod ingame_ui;
 mod menus;
 mod player;
 mod shopkeeper;
+mod splash;
 mod score;
 mod props;
 mod title_screen;
@@ -78,6 +79,7 @@ fn main() {
         .add_plugin(player::PlayerPlugin)
         .add_plugin(props::PropsPlugin)
         .add_plugin(score::ScorePlugin)
+        .add_plugin(splash::SplashPlugin)
         .add_plugin(fishmonger::FishMongerPlugin)
         .add_plugin(shopkeeper::ShopKeeperPlugin)
         .add_plugin(title_screen::TitlePlugin)
@@ -126,7 +128,7 @@ fn bootstrap(
     audio.set_volume();
     clear_color.0 = Color::hex("aaaaaa").unwrap();
 
-    assets_handler.load(AppState::TitleScreen, &mut game_assets, &game_state);
+    assets_handler.load(AppState::Splash, &mut game_assets, &game_state);
 }
 
 pub trait ZeroSignum {
@@ -261,7 +263,7 @@ fn debug(
 
     if keys.just_pressed(KeyCode::V) {
         // skip cutscene
-        cutscene_state.cutscene_index = 99999999999;
+        cutscene_state.cutscene_index = 99999;
         cutscene_state.waiting_on_input = false;
         game_state.current_time = 0.0;
     }

@@ -106,22 +106,22 @@ pub fn pan_orbit_camera(
 
         let camera_speed = 30.0;
 
-        if keyboard_input.pressed(KeyCode::Up) {
-            let forward = transform.forward();
-            transform.translation += forward * camera_speed * time.delta_seconds();
-        }
-        if keyboard_input.pressed(KeyCode::Down) {
-            let back = transform.back();
-            transform.translation += back * camera_speed * time.delta_seconds();
-        }
-        if keyboard_input.pressed(KeyCode::Left) {
-            let left = transform.left();
-            transform.translation += left * camera_speed * time.delta_seconds();
-        }
-        if keyboard_input.pressed(KeyCode::Right) {
-            let right = transform.right();
-            transform.translation += right * camera_speed * time.delta_seconds();
-        }
+//      if keyboard_input.pressed(KeyCode::Up) {
+//          let forward = transform.forward();
+//          transform.translation += forward * camera_speed * time.delta_seconds();
+//      }
+//      if keyboard_input.pressed(KeyCode::Down) {
+//          let back = transform.back();
+//          transform.translation += back * camera_speed * time.delta_seconds();
+//      }
+//      if keyboard_input.pressed(KeyCode::Left) {
+//          let left = transform.left();
+//          transform.translation += left * camera_speed * time.delta_seconds();
+//      }
+//      if keyboard_input.pressed(KeyCode::Right) {
+//          let right = transform.right();
+//          transform.translation += right * camera_speed * time.delta_seconds();
+//      }
 
         let mut any = false;
         if rotation_move.length_squared() > 0.0 {

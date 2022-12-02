@@ -33,6 +33,10 @@ impl Plugin for InGamePlugin {
             .add_plugin(HookPlugin)
             .add_plugin(CameraShakePlugin)
             .add_system_set(
+                SystemSet::on_update(AppState::Cutscene)
+                    .with_system(handle_sirens)
+            )
+            .add_system_set(
                 SystemSet::on_update(AppState::InGame)
 //                  .with_system(game_camera::follow_player.after(player::move_player))
 //                  .with_system(game_camera::light_follow_camera.after(player::move_player))
@@ -40,7 +44,7 @@ impl Plugin for InGamePlugin {
                     .with_system(collision_report)
                     .with_system(game_camera::look_at_player)
                     .with_system(rotate_rotate_entities)
-                    .with_system(game_camera::pan_orbit_camera),
+                    //.with_system(game_camera::pan_orbit_camera),
             );
     }
 }
@@ -132,6 +136,7 @@ pub fn load(
     assets_handler.add_audio(&mut game_assets.mat_speak, "audio/mat_speak.wav");
     assets_handler.add_audio(&mut game_assets.pa_speak, "audio/pa_speak.wav");
     assets_handler.add_audio(&mut game_assets.clop_sfx, "audio/clop.wav");
+    assets_handler.add_audio(&mut game_assets.fire_sfx, "audio/fire.ogg");
     assets_handler.add_audio(&mut game_assets.break_sfx, "audio/break.wav");
     assets_handler.add_audio(&mut game_assets.crash_sfx, "audio/crash.wav");
     assets_handler.add_audio(&mut game_assets.intro_bgm, "audio/intro.ogg");
@@ -534,10 +539,16 @@ fn handle_lights(
         entity_commands
             .insert(PointLight {
                 color: Color::rgb(0.00, 0.474, 0.78),
-                intensity: 2274.0,
+                intensity: 20380.0,
+                range: 44.0,
                 shadows_enabled: true,
                 ..default()
-            });
+            })
+        .insert(FishLight {
+            is_siren: false,
+            is_blue: true,
+            cooldown: 0.0,
+        });
     }
 //    color:  1.0, .279, 0
 //    intensity: 58
@@ -545,6 +556,34 @@ fn handle_lights(
 // shadows_enabled
 // shadow_depth_bias
 // shadow_normal_bias
+}
+
+fn handle_sirens(
+    mut lights: Query<(&mut PointLight, &mut FishLight)>,
+    time: Res<Time>,
+) {
+    for (mut p, mut f) in &mut lights {
+        if f.is_siren {
+            f.cooldown -= time.delta_seconds();
+            if f.cooldown < 0.0 {
+                f.cooldown = 0.5;
+                f.is_blue = !f.is_blue;
+
+                if f.is_blue {
+                    p.color = Color::rgb(0.00, 0.0, 0.78);
+                } else {
+                    p.color = Color::rgb(0.78, 0.0, 0.00);
+                }
+            }
+        }
+    }
+}
+
+#[derive(Component)]
+pub struct FishLight {
+    pub is_siren: bool,
+    pub is_blue: bool,
+    pub cooldown: f32,
 }
 
 #[derive(Component)]
