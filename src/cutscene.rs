@@ -407,6 +407,7 @@ fn play_cutscene(
     bulls: Query<Entity, With<bull::Bull>>,
 //    mut ingame_ui_textbox: ResMut<ingame_ui::TextBox>,
     mut audio: GameAudio,
+    text_container: Query<&Children, With<CutsceneTextContainerMarker>>,
 ) {
     let mut camera = camera.single_mut();
 //    println!("{:?} {:?}", camera.translation, camera.rotation.to_axis_angle());
@@ -619,10 +620,44 @@ fn play_cutscene(
         game_script::GameScript::PreLevelOneCutscene => {
             match cutscene_state.cutscene_index {
                 0 => {
+                    cutscene_state.target_camera_translation = Some(Vec3::new(6.8157444, 30.6143255, -2.526128));
+                    cutscene_state.target_camera_rotation = None;
+                    camera.translation = Vec3::new(0.0, 0.0, 0.0);
+                    camera.rotation = Quat::from_axis_angle(Vec3::new(-0.051877804, 0.9947759, 0.08791898), 2.080009);
+
+                    cutscene_state.input_cooldown = 0.5;
+                    cutscene_state.waiting_on_input = false;
+                    cutscene_state.cutscene_index += 1;
+                    // clear out existing text
+                    for children in text_container.iter() {
+                        for entity in children.iter() {
+                            commands.get_or_spawn(*entity).despawn_recursive();
+                        }
+                    }
+                },
+                1 => {
                     cutscene_state.target_camera_translation = None;
                     cutscene_state.target_camera_rotation = None;
                     camera.translation = Vec3::new(6.8157444, 30.6143255, -2.526128);
                     camera.rotation = Quat::from_axis_angle(Vec3::new(-0.051877804, 0.9947759, 0.08791898), 2.080009);
+
+                    for entity in &players {
+                        println!("setting player animation");
+                        let mut animation = animations.get_mut(entity).unwrap();
+                        animation.play(game_assets.matador_run.clone_weak()).repeat();
+                        animation.set_speed(4.0);
+                    }
+
+                    for entity in &bulls {
+                        println!("setting bull animation");
+                        let mut animation = animations.get_mut(entity).unwrap();
+                        animation.play(game_assets.bull_run.clone_weak()).repeat();
+                        animation.set_speed(3.0);
+                        animation.resume();
+                    }
+
+                    cutscene_state.target_camera_translation = Some(Vec3::new(6.8157444, 2.0143255, -2.526128));
+
                     audio.stop_bgm();
                     audio.play_bgm(&game_assets.pregame_bgm);
 
@@ -633,7 +668,7 @@ fn play_cutscene(
                         speaking: DisplayCharacter::Pa,
                     });
                 },
-                1 => {
+                2 => {
                     for entity in &players {
                         println!("setting player animation");
                         let mut animation = animations.get_mut(entity).unwrap();
@@ -658,7 +693,7 @@ fn play_cutscene(
                         speaking: DisplayCharacter::Pa,
                     });
                 },
-                2 => {
+                3 => {
                     textbox.queued_text = Some(TextBoxText {
                         text: "PA: And then... you wreck the place.".to_string(),
                         speed: text_speed,
@@ -666,7 +701,7 @@ fn play_cutscene(
                         speaking: DisplayCharacter::Pa,
                     });
                 },
-                3 => {
+                4 => {
                     textbox.queued_text = Some(TextBoxText {
                         text: "PA: Just destroy all their antiques.".to_string(),
                         speed: text_speed,
@@ -674,7 +709,7 @@ fn play_cutscene(
                         speaking: DisplayCharacter::Pa,
                     });
                 },
-                4 => {
+                5 => {
                     cutscene_texture_state.mat = vec!(CutsceneTexture::MatIdle, 
                                                      CutsceneTexture::MatTalk);
                     textbox.queued_text = Some(TextBoxText {
@@ -684,7 +719,7 @@ fn play_cutscene(
                         speaking: DisplayCharacter::Mat,
                     });
                 },
-                5 => {
+                6 => {
                     textbox.queued_text = Some(TextBoxText {
                         text: "PA: That's the beauty, kid! You're not doing it, your bull is!".to_string(),
                         speed: text_speed,
@@ -692,7 +727,7 @@ fn play_cutscene(
                         speaking: DisplayCharacter::Pa,
                     });
                 },
-                6 => {
+                7 => {
                     textbox.queued_text = Some(TextBoxText {
                         text: "PA: It's 100% legal!".to_string(),
                         speed: text_speed,
@@ -700,7 +735,7 @@ fn play_cutscene(
                         speaking: DisplayCharacter::Pa,
                     });
                 },
-                7 => {
+                8 => {
                     textbox.queued_text = Some(TextBoxText {
                         text: "PA: Anymore questions?".to_string(),
                         speed: text_speed,
@@ -708,7 +743,7 @@ fn play_cutscene(
                         speaking: DisplayCharacter::Pa,
                     });
                 },
-                8 => {
+                9 => {
                     cutscene_texture_state.mat = vec!(CutsceneTexture::MatIdle, 
                                                      CutsceneTexture::MatTalk);
                     textbox.queued_text = Some(TextBoxText {
@@ -718,7 +753,7 @@ fn play_cutscene(
                         speaking: DisplayCharacter::Mat,
                     });
                 },
-                9 => {
+                10 => {
                     cutscene_texture_state.mat = vec!(CutsceneTexture::MatIdle); 
                     textbox.queued_text = Some(TextBoxText {
                         text: "PA: I gave you that earpiece, remember?".to_string(),
@@ -727,7 +762,7 @@ fn play_cutscene(
                         speaking: DisplayCharacter::Pa,
                     });
                 },
-                10 => {
+                11 => {
                     cutscene_texture_state.mat = vec!(CutsceneTexture::MatIdle, 
                                                      CutsceneTexture::MatTalk);
                     textbox.queued_text = Some(TextBoxText {
@@ -737,7 +772,7 @@ fn play_cutscene(
                         speaking: DisplayCharacter::Mat,
                     });
                 },
-                11 => {
+                12 => {
                     cutscene_texture_state.mat = vec!(CutsceneTexture::MatIdle); 
                     textbox.queued_text = Some(TextBoxText {
                         text: "PA: Nevermind that! You're almost at the first shop.".to_string(),
@@ -746,7 +781,7 @@ fn play_cutscene(
                         speaking: DisplayCharacter::Pa,
                     });
                 },
-                12 => {
+                13 => {
                     cutscene_texture_state.mat = vec!(CutsceneTexture::MatIdle); 
                     textbox.queued_text = Some(TextBoxText {
                         text: "PA: Remember, the best offensive is to be offensive!".to_string(),

@@ -224,10 +224,6 @@ pub fn spawn_camera<T: Component + Clone>(
 
                 t
             },
-            camera: Camera {
-                priority: 0,
-                ..default()
-            },
             //      projection: OrthographicProjection {
             //          scale: 10.0,
             //          scaling_mode: ScalingMode::FixedVertical(1.0),
