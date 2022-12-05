@@ -2054,7 +2054,6 @@ checksum = "10a35a97730320ffe8e2d410b5d3b69279b98d2c14bdb8b70ea89ecf7888d41e"
 dependencies = [
  "autocfg",
  "hashbrown",
- "serde",
 ]
 
 [[package]]
@@ -2923,7 +2922,6 @@ dependencies = [
  "bitflags",
  "downcast-rs",
  "either",
- "indexmap",
  "nalgebra",
  "num-derive",
  "num-traits",
@@ -3457,7 +3455,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2f3fd720c48c53cace224ae62bef1bbff363a70c68c4802a78b5cc6159618176"
 dependencies = [
  "approx",
- "libm",
  "num-complex",
  "num-traits",
  "paste",
