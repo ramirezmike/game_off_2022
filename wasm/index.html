@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script src="./loading_screen.mjs"></script>
+
+    <script type="module">
+      // Load the game asynchronously
+      import("./bevy_game.js").then((game) => {
+        game.default();
+      });
+    </script>
+
+    <style>
+      body {
+        margin: 0px;
+        height: 100vh;
+        width: 100vw;
+        overflow: hidden;
+
+        background-color: white;
+        color: #023e8a;
+      }
+
+      #loading-screen {
+        width: 100%;
+        height: 100%;
+
+        display: flex;
+        flex-flow: column;
+        justify-content: center;
+        align-items: center;
+
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      #loading-indicator {
+        font-size: 4em;
+      }
+    </style>
+  </head>
+
+  <body id="body">
+    <div id="loading-screen">
+      <div id="loading-indicator">
+        Loading<span id="loading-dots">...</span>
+      </div>
+      <div>Made with Bevy</div>
+    </div>
+  </body>
+</html>
